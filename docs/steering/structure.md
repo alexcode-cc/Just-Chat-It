@@ -3,7 +3,7 @@
 ## 整體專案架構
 
 ```
-multi-ai-chat-desktop/
+Just-Chat-It/
 ├── src/                        # 原始碼目錄
 │   ├── main/                   # Electron主程序
 │   ├── renderer/               # Vue渲染程序
