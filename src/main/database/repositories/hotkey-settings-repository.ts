@@ -189,12 +189,7 @@ export class HotkeySettingsRepository extends BaseRepository<HotkeySettings> {
 
     this.db.transaction(() => {
       settings.forEach((setting) => {
-        updateStmt.run(
-          setting.accelerator,
-          setting.enabled ? 1 : 0,
-          now,
-          setting.id
-        );
+        updateStmt.run(setting.accelerator, setting.enabled ? 1 : 0, now, setting.id);
       });
     })();
   }

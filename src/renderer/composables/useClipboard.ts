@@ -122,9 +122,7 @@ export function useClipboard() {
    * 設定剪貼簿內容監聽器
    * 當主程序發送剪貼簿內容時觸發
    */
-  const setupClipboardListener = (
-    callback: (data: ClipboardContentData) => void
-  ) => {
+  const setupClipboardListener = (callback: (data: ClipboardContentData) => void) => {
     window.electronAPI.onClipboardContent((content) => {
       // 檢查 content 的類型
       if (typeof content === 'string') {

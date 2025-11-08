@@ -338,14 +338,17 @@ export function setupIpcHandlers(manager?: WindowManager, clipboard?: ClipboardM
     }
   });
 
-  ipcMain.handle('hotkey:check-conflict', async (event, accelerator: string, excludeId?: string) => {
-    try {
-      return hotkeySettingsRepo.isAcceleratorUsed(accelerator, excludeId);
-    } catch (error) {
-      console.error('Error checking hotkey conflict:', error);
-      return false;
+  ipcMain.handle(
+    'hotkey:check-conflict',
+    async (event, accelerator: string, excludeId?: string) => {
+      try {
+        return hotkeySettingsRepo.isAcceleratorUsed(accelerator, excludeId);
+      } catch (error) {
+        console.error('Error checking hotkey conflict:', error);
+        return false;
+      }
     }
-  });
+  );
 
   ipcMain.handle('hotkey:batch-update', async (event, settings: any[]) => {
     try {
@@ -369,22 +372,25 @@ export function setupIpcHandlers(manager?: WindowManager, clipboard?: ClipboardM
   });
 
   // 系統通知
-  ipcMain.handle('notification:show', async (event, options: { title: string; body: string; icon?: string }) => {
-    try {
-      const notification = new Notification({
-        title: options.title,
-        body: options.body,
-        icon: options.icon,
-      });
+  ipcMain.handle(
+    'notification:show',
+    async (event, options: { title: string; body: string; icon?: string }) => {
+      try {
+        const notification = new Notification({
+          title: options.title,
+          body: options.body,
+          icon: options.icon,
+        });
 
-      notification.show();
+        notification.show();
 
-      return { success: true };
-    } catch (error) {
-      console.error('Error showing notification:', error);
-      throw error;
+        return { success: true };
+      } catch (error) {
+        console.error('Error showing notification:', error);
+        throw error;
+      }
     }
-  });
+  );
 
   // 剪貼簿管理
   ipcMain.handle('clipboard:get-settings', async () => {

@@ -49,30 +49,15 @@
 
     <!-- 工具列 -->
     <div class="toolbar liquid-glass-subtle">
-      <v-btn
-        variant="text"
-        size="small"
-        prepend-icon="mdi-plus"
-        @click="handleNewSession"
-      >
+      <v-btn variant="text" size="small" prepend-icon="mdi-plus" @click="handleNewSession">
         新對話
       </v-btn>
 
-      <v-btn
-        variant="text"
-        size="small"
-        prepend-icon="mdi-history"
-        @click="showHistory = true"
-      >
+      <v-btn variant="text" size="small" prepend-icon="mdi-history" @click="showHistory = true">
         歷史記錄
       </v-btn>
 
-      <v-btn
-        variant="text"
-        size="small"
-        prepend-icon="mdi-refresh"
-        @click="handleRefresh"
-      >
+      <v-btn variant="text" size="small" prepend-icon="mdi-refresh" @click="handleRefresh">
         重新整理
       </v-btn>
 

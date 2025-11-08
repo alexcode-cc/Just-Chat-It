@@ -93,7 +93,9 @@
               </v-col>
 
               <v-col cols="12">
-                <label class="text-subtitle-2 mb-2 d-block">效果強度 ({{ settings.liquidGlass.intensity }}%)</label>
+                <label class="text-subtitle-2 mb-2 d-block"
+                  >效果強度 ({{ settings.liquidGlass.intensity }}%)</label
+                >
                 <v-slider
                   v-model="settings.liquidGlass.intensity"
                   :min="0"
@@ -106,7 +108,9 @@
               </v-col>
 
               <v-col cols="12">
-                <label class="text-subtitle-2 mb-2 d-block">透明度 ({{ settings.liquidGlass.opacity }}%)</label>
+                <label class="text-subtitle-2 mb-2 d-block"
+                  >透明度 ({{ settings.liquidGlass.opacity }}%)</label
+                >
                 <v-slider
                   v-model="settings.liquidGlass.opacity"
                   :min="0"
@@ -119,7 +123,9 @@
               </v-col>
 
               <v-col cols="12">
-                <label class="text-subtitle-2 mb-2 d-block">模糊程度 ({{ settings.liquidGlass.blurAmount }}%)</label>
+                <label class="text-subtitle-2 mb-2 d-block"
+                  >模糊程度 ({{ settings.liquidGlass.blurAmount }}%)</label
+                >
                 <v-slider
                   v-model="settings.liquidGlass.blurAmount"
                   :min="0"
@@ -214,9 +220,7 @@
                   <v-icon class="mr-2" :color="clipboardMonitoring ? 'success' : 'grey'">
                     {{ clipboardMonitoring ? 'mdi-check-circle' : 'mdi-circle-outline' }}
                   </v-icon>
-                  <span>
-                    剪貼簿監控：{{ clipboardMonitoring ? '運行中' : '已停用' }}
-                  </span>
+                  <span> 剪貼簿監控：{{ clipboardMonitoring ? '運行中' : '已停用' }} </span>
                 </div>
                 <div v-if="lastClipboardContent" class="mt-3">
                   <p class="text-caption text-grey mb-2">最後檢測到的內容：</p>
