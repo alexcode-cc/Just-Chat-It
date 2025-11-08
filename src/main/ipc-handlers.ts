@@ -20,7 +20,7 @@ let hotkeySettingsRepo: HotkeySettingsRepository;
 let windowManager: WindowManager;
 let clipboardManager: ClipboardManager | null = null;
 
-export function setupIpcHandlers(manager?: WindowManager, clipboard?: ClipboardManager) {
+export function setupIpcHandlers(manager?: WindowManager, clipboardMgr?: ClipboardManager) {
   // 初始化 Repository
   aiServiceRepo = new AIServiceRepository();
   chatSessionRepo = new ChatSessionRepository();
@@ -33,8 +33,8 @@ export function setupIpcHandlers(manager?: WindowManager, clipboard?: ClipboardM
     windowManager = manager;
   }
 
-  if (clipboard) {
-    clipboardManager = clipboard;
+  if (clipboardMgr) {
+    clipboardManager = clipboardMgr;
   }
 
   // 視窗控制
@@ -115,10 +115,10 @@ export function setupIpcHandlers(manager?: WindowManager, clipboard?: ClipboardM
             }
             return chatSessionRepo.findById(data.id);
           }
-          return chatSessionRepo.create(data.aiServiceId, data.title);
+          return chatSessionRepo.createSession(data.aiServiceId, data.title);
 
         case 'chat_messages':
-          return chatMessageRepo.create(data.sessionId, data.content, data.isUser, data.metadata);
+          return chatMessageRepo.createMessage(data.sessionId, data.content, data.isUser, data.metadata);
 
         case 'prompts':
           if (data._delete) {
@@ -131,9 +131,9 @@ export function setupIpcHandlers(manager?: WindowManager, clipboard?: ClipboardM
             if (data.usageCount !== undefined) {
               promptRepo.incrementUsage(data.id);
             }
-            return promptRepo.update(data.id, data);
+            return promptRepo.updatePrompt(data.id, data);
           }
-          return promptRepo.create(data.title, data.content, data.category, data.tags);
+          return promptRepo.createPrompt(data.title, data.content, data.category, data.tags);
 
         default:
           throw new Error(`Unknown table: ${table}`);

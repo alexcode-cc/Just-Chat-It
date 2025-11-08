@@ -96,7 +96,7 @@ export const useChatStore = defineStore('chat', {
     /**
      * 載入會話的訊息記錄
      */
-    async loadSessionHistory(sessionId: string) {
+    async loadSessionHistory(sessionId: string): Promise<ChatMessage[]> {
       this.loading = true;
       this.error = null;
 
@@ -112,9 +112,12 @@ export const useChatStore = defineStore('chat', {
         if (session) {
           this.currentSession = session;
         }
+
+        return messages;
       } catch (error) {
         this.error = `載入訊息記錄失敗: ${error}`;
         console.error('Failed to load session history:', error);
+        throw error;
       } finally {
         this.loading = false;
       }

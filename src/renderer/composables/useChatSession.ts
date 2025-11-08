@@ -61,11 +61,10 @@ export function useChatSession(serviceId: string) {
       throw new Error(`Service ${serviceId} not found`);
     }
 
-    const session = await chatStore.createSession({
-      aiServiceId: serviceId,
-      title: title || `${service.value.name} 對話 - ${new Date().toLocaleString()}`,
-      isActive: true,
-    });
+    const session = await chatStore.createSession(
+      serviceId,
+      title || `${service.value.name} 對話 - ${new Date().toLocaleString()}`
+    );
 
     currentSession.value = session;
     messages.value = [];
@@ -102,12 +101,13 @@ export function useChatSession(serviceId: string) {
       await createNewSession();
     }
 
-    const message = await chatStore.saveMessage({
-      sessionId: currentSession.value!.id,
-      role,
+    const isUser = role === 'user';
+    const message = await chatStore.saveMessage(
+      currentSession.value!.id,
       content,
-      metadata,
-    });
+      isUser,
+      metadata
+    );
 
     messages.value.push(message);
 
@@ -131,10 +131,13 @@ export function useChatSession(serviceId: string) {
     const savedMessages: ChatMessage[] = [];
 
     for (const msgData of messagesData) {
-      const message = await chatStore.saveMessage({
-        sessionId: currentSession.value!.id,
-        ...msgData,
-      });
+      const isUser = msgData.role === 'user';
+      const message = await chatStore.saveMessage(
+        currentSession.value!.id,
+        msgData.content,
+        isUser,
+        msgData.metadata
+      );
       savedMessages.push(message);
     }
 
