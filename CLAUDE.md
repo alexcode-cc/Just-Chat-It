@@ -2,185 +2,360 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 專案概述
+## Project Overview
 
-Just Chat It 是一個現代化的多AI聊天桌面應用程式，採用 Electron + Vue 3 + Vuetify 架構，實現與多個AI服務（ChatGPT、Claude、Gemini等）的同時對話功能。
+Just Chat It is a modern multi-AI chat desktop application built with Electron + Vue 3 + Vuetify architecture, enabling simultaneous conversations with multiple AI services (ChatGPT, Claude, Gemini, etc.).
 
-## 開發命令
+## Development Commands
 
-### 專案設定與開發
+### Project Setup and Development
 ```bash
-# 安裝依賴
+# Install dependencies
 npm install
 
-# 開發模式啟動
+# Start development mode
 npm run dev
 
-# 建置應用程式
+# Build application
 npm run build
 
-# 打包桌面應用
+# Package desktop application
 npm run dist
 ```
 
-### 測試
+### Testing
 ```bash
-# 執行單元測試
+# Run unit tests
 npm run test
 
-# 執行E2E測試
+# Run E2E tests
 npm run test:e2e
 
-# 測試覆蓋率報告
+# Generate test coverage report
 npm run test:coverage
 ```
 
-### 程式碼品質
+### Code Quality
 ```bash
-# ESLint檢查
+# ESLint check
 npm run lint
 
-# 自動修復程式碼格式
+# Auto-fix code format
 npm run lint:fix
 
-# Prettier格式化
+# Prettier formatting
 npm run format
 ```
 
-## 技術架構
+## Technical Architecture
 
-### 核心技術棧
-- **Electron**: 跨平台桌面應用框架
-- **Vue 3**: 前端框架（使用 Composition API）
-- **Vuetify 3**: Material Design 組件庫
-- **TypeScript**: 類型安全開發
-- **Vite**: 現代化建置工具
-- **Pinia**: 狀態管理
-- **SQLite**: 本地資料庫
+### Core Technology Stack
+- **Electron**: Cross-platform desktop application framework
+- **Vue 3**: Frontend framework (using Composition API)
+- **Vuetify 3**: Material Design component library
+- **TypeScript**: Type-safe development
+- **Vite**: Modern build tool
+- **Pinia**: State management
+- **SQLite**: Local database
 
-### 架構模式
-- **主程序 (Main Process)**: 處理應用生命週期、多視窗管理、系統整合、資料庫操作
-- **渲染程序 (Renderer Process)**: Vue 3 應用邏輯、UI 渲染、WebView 整合
-- **IPC 通訊**: 主程序與渲染程序間的型別安全通訊
+### Architecture Patterns
+- **Main Process**: Handles application lifecycle, multi-window management, system integration, database operations
+- **Renderer Process**: Vue 3 application logic, UI rendering, WebView integration
+- **IPC Communication**: Type-safe communication between main and renderer processes
 
-## 專案結構
+## Project Structure
 
 ```
 src/
-├── main/                   # Electron 主程序
-│   ├── window-manager.ts   # 視窗管理
-│   ├── ipc-handlers.ts     # IPC 事件處理
-│   ├── system-integration/ # 系統整合（托盤、熱鍵、剪貼簿）
-│   └── database/           # SQLite 資料庫管理
-├── renderer/               # Vue 渲染程序
-│   ├── components/         # Vue 組件
-│   │   ├── common/         # 通用組件
-│   │   ├── dashboard/      # 主控制面板
-│   │   ├── chat/           # 聊天相關組件
-│   │   ├── compare/        # AI比較功能
-│   │   ├── prompts/        # 提示詞管理
-│   │   └── settings/       # 設定介面
-│   ├── stores/             # Pinia 狀態管理
-│   ├── types/              # TypeScript 類型定義
-│   ├── utils/              # 工具函數
-│   └── styles/             # 樣式檔案（含 Liquid Glass 效果）
-├── shared/                 # 共用程式碼
-│   ├── types/              # 共用類型定義
-│   ├── constants/          # 常數定義
-│   └── utils/              # 共用工具函數
-└── assets/                 # 靜態資源
+├── main/                   # Electron main process
+│   ├── window-manager.ts   # Window management
+│   ├── ipc-handlers.ts     # IPC event handlers
+│   ├── system-integration/ # System integration (tray, hotkeys, clipboard)
+│   └── database/           # SQLite database management
+├── renderer/               # Vue renderer process
+│   ├── components/         # Vue components
+│   │   ├── common/         # Common components
+│   │   ├── dashboard/      # Main dashboard
+│   │   ├── chat/           # Chat-related components
+│   │   ├── compare/        # AI comparison features
+│   │   ├── prompts/        # Prompt management
+│   │   └── settings/       # Settings interface
+│   ├── stores/             # Pinia state management
+│   ├── types/              # TypeScript type definitions
+│   ├── utils/              # Utility functions
+│   └── styles/             # Style files (including Liquid Glass effects)
+├── shared/                 # Shared code
+│   ├── types/              # Shared type definitions
+│   ├── constants/          # Constants definitions
+│   └── utils/              # Shared utility functions
+└── assets/                 # Static resources
 ```
 
-## 核心功能實作
+## Core Feature Implementation
 
-### 多視窗管理
-- 每個 AI 服務獨立的 BrowserWindow
-- WebView 整合各 AI 服務網頁介面
-- 視窗狀態和位置的持久化儲存
+### Multi-Window Management
+- Independent BrowserWindow for each AI service
+- WebView integration for AI service web interfaces
+- Persistent storage of window state and position
 
-### 狀態管理架構
-主要 Pinia Stores：
-- **AIStore**: AI 服務管理、視窗狀態、額度追蹤
-- **ChatStore**: 聊天會話管理、訊息記錄
-- **PromptStore**: 提示詞庫管理
-- **SettingsStore**: 應用程式設定
+### State Management Architecture
+Main Pinia Stores:
+- **AIStore**: AI service management, window state, quota tracking
+- **ChatStore**: Chat session management, message records
+- **PromptStore**: Prompt library management
+- **SettingsStore**: Application settings
 
-### 資料庫設計
-SQLite 表格：
-- `ai_services`: AI 服務配置
-- `chat_sessions`: 聊天會話
-- `chat_messages`: 聊天訊息
-- `prompts`: 提示詞庫
-- `app_settings`: 應用程式設定
+### Database Design
+SQLite Tables:
+- `ai_services`: AI service configuration
+- `chat_sessions`: Chat sessions
+- `chat_messages`: Chat messages
+- `prompts`: Prompt library
+- `app_settings`: Application settings
 
-### Liquid Glass 視覺效果
-- 採用 backdrop-filter 和 CSS 變數實現玻璃擬態效果
-- 動態光影追蹤滑鼠位置
-- 與 Vuetify 主題系統整合
+### Liquid Glass Visual Effects
+- Implemented using backdrop-filter and CSS variables for glassmorphism effect
+- Dynamic light and shadow tracking mouse position
+- Integration with Vuetify theme system
 
-## 開發規範
+## Development Standards
 
-### 檔案命名
-- Vue 組件: PascalCase (如 `ChatWindow.vue`)
-- 工具函數: camelCase (如 `formatDate.ts`)
-- 常數: UPPER_SNAKE_CASE (如 `AI_SERVICES.ts`)
-- 類型定義: PascalCase (如 `AIService.ts`)
+### File Naming Conventions
+- Vue components: PascalCase (e.g., `ChatWindow.vue`)
+- Utility functions: camelCase (e.g., `formatDate.ts`)
+- Constants: UPPER_SNAKE_CASE (e.g., `AI_SERVICES.ts`)
+- Type definitions: PascalCase (e.g., `AIService.ts`)
 
-### TypeScript 要求
-- 啟用嚴格模式
-- 明確的類型定義，避免使用 `any`
-- 介面優於類型別名
-- IPC 通訊使用型別安全的 channel
+### TypeScript Requirements
+- Enable strict mode
+- Explicit type definitions, avoid using `any`
+- Prefer interfaces over type aliases
+- Use type-safe channels for IPC communication
 
-### Vue 3 規範
-- 使用 Composition API
-- 明確定義 Props 和 Emits
-- 響應式資料使用 ref/reactive
+### Vue 3 Standards
+- Use Composition API
+- Explicitly define Props and Emits
+- Use ref/reactive for reactive data
 
-### CSS 規範
-- 使用 SCSS 預處理器
-- BEM 命名規範
-- CSS 變數用於主題管理
-- 響應式設計原則
+### CSS Standards
+- Use SCSS preprocessor
+- BEM naming convention
+- CSS variables for theme management
+- Responsive design principles
 
-## 重要開發注意事項
+## Important Development Notes
 
-### WebView 整合
-- 每個 AI 服務使用獨立的 WebView 載入官方網頁
-- 實作離線存取功能，儲存聊天記錄到本地資料庫
-- 處理網路錯誤和服務不可用狀態
+### WebView Integration
+- Use independent WebView for each AI service to load official web pages
+- Implement offline access functionality, save chat history to local database
+- Handle network errors and service unavailability states
 
-### 系統整合功能
-- 全域熱鍵註冊和管理
-- 系統托盤整合
-- 剪貼簿內容監控
-- 桌面通知
+### System Integration Features
+- Global hotkey registration and management
+- System tray integration
+- Clipboard content monitoring
+- Desktop notifications
 
-### 效能考量
-- 多視窗的記憶體管理
-- WebView 資源清理
-- Liquid Glass 效果的硬體加速
-- 大量聊天記錄的虛擬化滾動
+### Performance Considerations
+- Memory management for multiple windows
+- WebView resource cleanup
+- Hardware acceleration for Liquid Glass effects
+- Virtualized scrolling for large chat histories
 
-### 錯誤處理
-- 分層錯誤處理：UI層、業務層、資料層、系統層
-- 優雅降級到離線模式
-- 用戶友好的錯誤訊息顯示
+### Error Handling
+- Layered error handling: UI layer, business layer, data layer, system layer
+- Graceful degradation to offline mode
+- User-friendly error message display
 
-## 測試策略
+## Testing Strategy
 
-- **單元測試**: Store actions、工具函數、資料模型（Vitest）
-- **整合測試**: IPC 通訊、資料庫操作、WebView 整合
-- **E2E 測試**: 完整用戶流程（Playwright for Electron）
-- **視覺回歸測試**: Liquid Glass 效果一致性
+- **Unit Tests**: Store actions, utility functions, data models (Vitest)
+- **Integration Tests**: IPC communication, database operations, WebView integration
+- **E2E Tests**: Complete user flows (Playwright for Electron)
+- **Visual Regression Tests**: Liquid Glass effect consistency
 
-## Git 提交規範
+## Git Commit Conventions
 
-採用 AngularJS Git Commit Message Conventions：
-- `feat: 功能描述` - 新功能
-- `fix: 修復描述` - 錯誤修復
-- `docs: 文件描述` - 文件更新
-- `style: 樣式描述` - 程式碼格式調整
-- `refactor: 重構描述` - 程式碼重構
-- `test: 測試描述` - 測試相關
-- `build: 建置描述` - 建置系統或外部相依性
+This project follows the **AngularJS Git Commit Message Conventions** to ensure clear, structured, and semantic commit history.
+
+### Commit Message Format
+
+Each commit message consists of a **header**, an optional **body**, and an optional **footer**:
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+#### Header
+The header is **mandatory** and must conform to the format: `<type>(<scope>): <subject>`
+
+- **type**: Describes the category of change (see types below)
+- **scope**: Optional, indicates the module or component affected (e.g., `chat`, `settings`, `database`)
+- **subject**: Brief description of the change
+  - Use imperative, present tense: "add" not "added" nor "adds"
+  - Don't capitalize the first letter
+  - No period (.) at the end
+  - Maximum 50 characters
+
+#### Body (Optional)
+- Provides detailed explanation of the change
+- Use imperative, present tense
+- Include motivation for the change and contrast with previous behavior
+- Wrap at 72 characters
+
+#### Footer (Optional)
+- Reference issue tracker IDs
+- Note breaking changes
+
+### Commit Types
+
+| Type | Description | Example |
+|------|-------------|---------|
+| **feat** | New feature or functionality | `feat(chat): add multi-AI simultaneous messaging` |
+| **fix** | Bug fix | `fix(webview): resolve memory leak in chat window` |
+| **docs** | Documentation changes | `docs(readme): update installation instructions` |
+| **style** | Code style changes (formatting, missing semi-colons, etc.) | `style(components): format code with prettier` |
+| **refactor** | Code refactoring without changing functionality | `refactor(store): simplify state management logic` |
+| **perf** | Performance improvements | `perf(renderer): optimize liquid glass rendering` |
+| **test** | Adding or updating tests | `test(chat): add unit tests for message handling` |
+| **build** | Changes to build system or dependencies | `build(deps): upgrade electron to v28` |
+| **ci** | Changes to CI configuration | `ci(github): add automated testing workflow` |
+| **chore** | Other changes that don't modify src or test files | `chore(git): update .gitignore` |
+| **revert** | Revert a previous commit | `revert: revert "feat(chat): add voice input"` |
+
+### Commit Examples
+
+#### Feature Addition
+```
+feat(prompts): add custom prompt template management
+
+Implement a new prompt template system that allows users to:
+- Create and save custom prompt templates
+- Organize templates by category
+- Apply templates across different AI services
+
+Closes #123
+```
+
+#### Bug Fix
+```
+fix(window): prevent window state loss on app restart
+
+The window position and size were not being persisted correctly
+when the application was closed. Updated the window-manager to
+properly save state before quit.
+
+Fixes #456
+```
+
+#### Documentation
+```
+docs(claude): translate CLAUDE.md to English
+
+- Translate all sections from Chinese to English
+- Maintain consistent terminology
+- Improve clarity and readability
+```
+
+#### Refactoring
+```
+refactor(database): migrate to better-sqlite3
+
+Replace sqlite3 package with better-sqlite3 for improved performance
+and synchronous API. Updated all database operations accordingly.
+
+BREAKING CHANGE: Database initialization now requires synchronous setup
+```
+
+#### Performance Improvement
+```
+perf(chat): implement virtual scrolling for messages
+
+Add virtual scrolling to chat message list to handle thousands
+of messages without performance degradation.
+```
+
+### Scope Guidelines
+
+Common scopes in this project:
+- **chat**: Chat-related features and components
+- **ai**: AI service integration and management
+- **window**: Window management and lifecycle
+- **database**: Database operations and schema
+- **ui**: User interface components and styling
+- **settings**: Application settings and preferences
+- **prompts**: Prompt management features
+- **system**: System integration (tray, hotkeys, clipboard)
+- **ipc**: Inter-process communication
+- **build**: Build configuration and tooling
+- **deps**: Dependencies management
+
+### Commit Guidelines
+
+1. **Atomic Commits**: Each commit should represent a single logical change
+2. **Meaningful Messages**: Commit messages should clearly explain what and why
+3. **Test Before Commit**: Ensure tests pass before committing
+4. **Stage Appropriately**: Only stage files related to the current change
+5. **Reference Issues**: Link commits to issue tracker when applicable
+
+### Breaking Changes
+
+If a commit introduces a breaking change, the footer should start with `BREAKING CHANGE:` followed by a description:
+
+```
+refactor(api): change IPC channel naming convention
+
+Update all IPC channel names to use kebab-case instead of camelCase
+for consistency with Electron best practices.
+
+BREAKING CHANGE: All existing IPC channel names have changed.
+Update any code that uses IPC communication:
+- `chatMessage` → `chat-message`
+- `windowState` → `window-state`
+```
+
+### Revert Commits
+
+If a commit reverts a previous commit, it should begin with `revert:`, followed by the header of the reverted commit:
+
+```
+revert: feat(voice): add voice input feature
+
+This reverts commit a1b2c3d4.
+
+The voice input feature is causing memory leaks in production.
+Will reimplement after fixing the underlying issue.
+```
+
+### Multi-Line Commits
+
+For complex changes, use a detailed body:
+
+```
+feat(compare): add side-by-side AI response comparison
+
+Implement a new comparison view that displays responses from
+multiple AI services side-by-side:
+
+- Add CompareView component with split-pane layout
+- Implement synchronized scrolling between panes
+- Add response highlighting for differences
+- Store comparison sessions in database
+
+This feature helps users evaluate different AI models and
+choose the best response for their needs.
+
+Closes #789
+```
+
+### Tools and Automation
+
+Consider using these tools to enforce commit conventions:
+- **commitlint**: Lint commit messages
+- **husky**: Git hooks for pre-commit checks
+- **commitizen**: Interactive commit message builder
+- **standard-version**: Automated versioning and changelog generation
