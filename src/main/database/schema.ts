@@ -67,6 +67,27 @@ export const CREATE_TABLES_SQL = {
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
   `,
+
+  // 視窗狀態表
+  windowStates: `
+    CREATE TABLE IF NOT EXISTS window_states (
+      id TEXT PRIMARY KEY,
+      window_type TEXT NOT NULL,
+      ai_service_id TEXT,
+      x INTEGER NOT NULL,
+      y INTEGER NOT NULL,
+      width INTEGER NOT NULL,
+      height INTEGER NOT NULL,
+      is_maximized INTEGER DEFAULT 0,
+      is_minimized INTEGER DEFAULT 0,
+      is_fullscreen INTEGER DEFAULT 0,
+      session_id TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (ai_service_id) REFERENCES ai_services(id),
+      FOREIGN KEY (session_id) REFERENCES chat_sessions(id)
+    )
+  `,
 };
 
 // 建立索引的SQL
@@ -94,5 +115,15 @@ export const CREATE_INDEXES_SQL = {
   promptsByFavorite: `
     CREATE INDEX IF NOT EXISTS idx_prompts_favorite
     ON prompts(is_favorite)
+  `,
+
+  windowStatesByType: `
+    CREATE INDEX IF NOT EXISTS idx_window_states_window_type
+    ON window_states(window_type)
+  `,
+
+  windowStatesByAI: `
+    CREATE INDEX IF NOT EXISTS idx_window_states_ai_service_id
+    ON window_states(ai_service_id)
   `,
 };

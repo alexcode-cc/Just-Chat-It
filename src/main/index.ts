@@ -29,8 +29,8 @@ class Application {
     // 初始化預設資料
     await initializeDefaultData();
 
-    // 設定 IPC handlers
-    setupIpcHandlers();
+    // 設定 IPC handlers (傳入 windowManager)
+    setupIpcHandlers(this.windowManager);
 
     // 建立主視窗
     await this.windowManager.createMainWindow();
@@ -49,6 +49,9 @@ class Application {
   }
 
   private onBeforeQuit() {
+    // 清理視窗狀態追蹤並保存最後狀態
+    this.windowManager.cleanup();
+
     // 關閉資料庫連接
     this.dbManager.close();
   }

@@ -70,3 +70,22 @@ export interface QuotaInfo {
   resetTime?: Date;
   usageCount?: number;
 }
+
+/**
+ * 視窗狀態介面
+ */
+export interface WindowState {
+  id: string; // 視窗ID (main, chat-chatgpt, chat-claude, etc.)
+  windowType: 'main' | 'chat' | 'compare' | 'settings';
+  aiServiceId?: string; // 對於聊天視窗，關聯的AI服務ID
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  isMaximized: boolean;
+  isMinimized: boolean;
+  isFullscreen: boolean;
+  sessionId?: string; // 關聯的會話ID
+  createdAt: Date;
+  updatedAt: Date;
+}

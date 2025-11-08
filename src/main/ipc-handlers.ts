@@ -4,20 +4,29 @@ import {
   ChatSessionRepository,
   ChatMessageRepository,
   PromptRepository,
+  WindowStateRepository,
 } from './database/repositories';
+import { WindowManager } from './window-manager';
 
 // 初始化 Repository 實例
 let aiServiceRepo: AIServiceRepository;
 let chatSessionRepo: ChatSessionRepository;
 let chatMessageRepo: ChatMessageRepository;
 let promptRepo: PromptRepository;
+let windowStateRepo: WindowStateRepository;
+let windowManager: WindowManager;
 
-export function setupIpcHandlers() {
+export function setupIpcHandlers(manager?: WindowManager) {
   // 初始化 Repository
   aiServiceRepo = new AIServiceRepository();
   chatSessionRepo = new ChatSessionRepository();
   chatMessageRepo = new ChatMessageRepository();
   promptRepo = new PromptRepository();
+  windowStateRepo = new WindowStateRepository();
+
+  if (manager) {
+    windowManager = manager;
+  }
 
   // 視窗控制
   ipcMain.handle('window:minimize', (event) => {
@@ -38,6 +47,38 @@ export function setupIpcHandlers() {
     const window = BrowserWindow.fromWebContents(event.sender);
     window?.close();
   });
+
+  ipcMain.handle('window:toggle-fullscreen', (event) => {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    if (window) {
+      window.setFullScreen(!window.isFullScreen());
+    }
+  });
+
+  ipcMain.handle('window:is-maximized', (event) => {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    return window?.isMaximized() || false;
+  });
+
+  ipcMain.handle('window:is-fullscreen', (event) => {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    return window?.isFullScreen() || false;
+  });
+
+  ipcMain.handle('window:get-bounds', (event) => {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    return window?.getBounds();
+  });
+
+  ipcMain.handle(
+    'window:set-bounds',
+    (event, bounds: { x?: number; y?: number; width?: number; height?: number }) => {
+      const window = BrowserWindow.fromWebContents(event.sender);
+      if (window) {
+        window.setBounds(bounds);
+      }
+    }
+  );
 
   // 系統整合
   ipcMain.handle('system:read-clipboard', () => {
@@ -157,7 +198,70 @@ export function setupIpcHandlers() {
 
   // AI 服務 - 建立聊天視窗
   ipcMain.handle('ai:create-chat-window', async (event, serviceId: string) => {
-    // 此功能將在後續階段實作
-    console.log(`Create chat window for service: ${serviceId}`);
+    try {
+      if (!windowManager) {
+        throw new Error('WindowManager not initialized');
+      }
+
+      // 檢查視窗是否已存在
+      const existingWindow = windowManager.getChatWindow(serviceId);
+      if (existingWindow && !existingWindow.isDestroyed()) {
+        existingWindow.focus();
+        return { success: true, existed: true };
+      }
+
+      // 建立新的聊天視窗
+      const chatWindow = windowManager.createChatWindow(serviceId);
+
+      // 載入 AI 服務網址
+      const service = aiServiceRepo.findById(serviceId);
+      if (service) {
+        await chatWindow.loadURL(service.webUrl);
+        aiServiceRepo.updateLastUsed(serviceId);
+      }
+
+      return { success: true, existed: false };
+    } catch (error) {
+      console.error(`Error creating chat window for service ${serviceId}:`, error);
+      throw error;
+    }
+  });
+
+  // 視窗狀態管理
+  ipcMain.handle('window-state:get', async (event, windowId: string) => {
+    try {
+      return windowStateRepo.findById(windowId);
+    } catch (error) {
+      console.error(`Error getting window state for ${windowId}:`, error);
+      return null;
+    }
+  });
+
+  ipcMain.handle('window-state:save', async (event, windowId: string, state: any) => {
+    try {
+      windowStateRepo.upsert({ id: windowId, ...state });
+      return { success: true };
+    } catch (error) {
+      console.error(`Error saving window state for ${windowId}:`, error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('window-state:get-main', async () => {
+    try {
+      return windowStateRepo.getMainWindowState();
+    } catch (error) {
+      console.error('Error getting main window state:', error);
+      return null;
+    }
+  });
+
+  ipcMain.handle('window-state:get-all-chat', async () => {
+    try {
+      return windowStateRepo.getAllChatWindowStates();
+    } catch (error) {
+      console.error('Error getting chat window states:', error);
+      return [];
+    }
   });
 }

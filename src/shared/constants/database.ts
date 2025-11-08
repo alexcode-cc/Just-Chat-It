@@ -12,6 +12,7 @@ export const TABLE_NAMES = {
   CHAT_MESSAGES: 'chat_messages',
   PROMPTS: 'prompts',
   APP_SETTINGS: 'app_settings',
+  WINDOW_STATES: 'window_states',
 } as const;
 
 // AI服務ID
