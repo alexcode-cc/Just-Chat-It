@@ -67,6 +67,7 @@ export class WindowManager {
         contextIsolation: true,
         nodeIntegration: false,
         preload: path.join(__dirname, '../preload/index.js'),
+        webviewTag: true, // 啟用 webview 標籤以載入 AI 服務網頁
       },
       frame: false,
       transparent: true,
