@@ -5,3 +5,4 @@
 export { useAIStore } from './ai';
 export { useChatStore } from './chat';
 export { usePromptStore } from './prompt';
+export { useSettingsStore } from './settings';

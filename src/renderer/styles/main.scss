@@ -16,21 +16,386 @@ body {
   height: 100vh;
 }
 
-// Liquid Glass 基礎效果
-.liquid-glass {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 16px;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+// ============================================================================
+// Liquid Glass 視覺效果系統
+// ============================================================================
+
+// CSS 變數定義
+:root {
+  // 玻璃效果參數
+  --glass-blur: 20px;
+  --glass-saturation: 180%;
+  --glass-opacity: 0.1;
+  --glass-border-opacity: 0.2;
+  --glass-radius: 16px;
+
+  // 顏色變數（淺色模式）
+  --glass-bg: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(255, 255, 255, 0.2);
+  --glass-highlight: rgba(255, 255, 255, 0.3);
+  --glass-shadow: rgba(0, 0, 0, 0.1);
+
+  // 動態光影變數
+  --mouse-x: 50%;
+  --mouse-y: 50%;
+  --dynamic-light: transparent;
+
+  // 動畫速度
+  --glass-transition-fast: 0.2s;
+  --glass-transition-normal: 0.3s;
+  --glass-transition-slow: 0.6s;
 }
 
-// 無邊框視窗樣式
-.window-content {
-  border-radius: 16px;
+// 深色模式變數
+.dark-theme {
+  --glass-bg: rgba(0, 0, 0, 0.2);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-highlight: rgba(255, 255, 255, 0.2);
+  --glass-shadow: rgba(0, 0, 0, 0.3);
+}
+
+// ----------------------------------------------------------------------------
+// 核心 Liquid Glass 樣式
+// ----------------------------------------------------------------------------
+
+// 基礎液態玻璃效果
+.liquid-glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  box-shadow:
+    0 8px 32px var(--glass-shadow),
+    inset 0 1px 0 var(--glass-highlight);
+
+  // 動態反射效果層
+  position: relative;
   overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+      45deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.1) 50%,
+      transparent 70%
+    );
+    transform: rotate(-45deg);
+    transition: transform var(--glass-transition-slow) ease;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  &:hover::before {
+    transform: rotate(-45deg) translate(50%, 50%);
+  }
+}
+
+// 互動式液態玻璃效果
+.liquid-glass-interactive {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  box-shadow:
+    0 8px 32px var(--glass-shadow),
+    inset 0 1px 0 var(--glass-highlight);
+
+  position: relative;
+  overflow: hidden;
+  transition: all var(--glass-transition-normal) cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+
+  // 反射層
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+      45deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.1) 50%,
+      transparent 70%
+    );
+    transform: rotate(-45deg);
+    transition: transform var(--glass-transition-slow) ease;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  // 動態光影層
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--dynamic-light);
+    opacity: 0;
+    transition: opacity var(--glass-transition-normal) ease;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+
+    &::before {
+      transform: rotate(-45deg) translate(50%, 50%);
+    }
+
+    &::after {
+      opacity: 1;
+    }
+  }
+
+  &:active {
+    transform: translateY(0);
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+}
+
+// 強調版液態玻璃（更明顯的效果）
+.liquid-glass-strong {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(30px) saturate(200%);
+  -webkit-backdrop-filter: blur(30px) saturate(200%);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--glass-radius);
+  box-shadow:
+    0 12px 48px rgba(0, 0, 0, 0.15),
+    inset 0 2px 0 rgba(255, 255, 255, 0.3);
+}
+
+// 微妙版液態玻璃（較輕的效果）
+.liquid-glass-subtle {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px) saturate(150%);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--glass-radius);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+// ----------------------------------------------------------------------------
+// 特殊形狀和變體
+// ----------------------------------------------------------------------------
+
+// 圓形液態玻璃
+.liquid-glass-circle {
+  @extend .liquid-glass;
+  border-radius: 50%;
+}
+
+// 膠囊形液態玻璃
+.liquid-glass-pill {
+  @extend .liquid-glass;
+  border-radius: 9999px;
+}
+
+// 卡片樣式液態玻璃
+.liquid-glass-card {
+  @extend .liquid-glass-interactive;
+  padding: 24px;
+  transition: all var(--glass-transition-normal) cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    transform: translateY(-4px) scale(1.02);
+  }
+}
+
+// 面板樣式液態玻璃
+.liquid-glass-panel {
+  @extend .liquid-glass;
+  padding: 20px;
+  min-height: 200px;
+}
+
+// ----------------------------------------------------------------------------
+// 組件特定樣式
+// ----------------------------------------------------------------------------
+
+// 按鈕樣式
+.liquid-glass-button {
+  @extend .liquid-glass-interactive;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 500;
+  text-align: center;
+  user-select: none;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  &.primary {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.4);
+  }
+
+  &.secondary {
+    background: rgba(139, 92, 246, 0.2);
+    border-color: rgba(139, 92, 246, 0.4);
+  }
+}
+
+// 輸入框樣式
+.liquid-glass-input {
+  @extend .liquid-glass;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  transition: all var(--glass-transition-normal) ease;
+
+  &:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(99, 102, 241, 0.5);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.1),
+      0 0 0 3px rgba(99, 102, 241, 0.1);
+  }
+}
+
+// 導航欄樣式
+.liquid-glass-navbar {
+  @extend .liquid-glass;
+  padding: 16px 24px;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+}
+
+// 側邊欄樣式
+.liquid-glass-sidebar {
+  @extend .liquid-glass;
+  border-radius: 0;
+  border-top: none;
+  border-bottom: none;
+  border-left: none;
+  height: 100%;
+}
+
+// ----------------------------------------------------------------------------
+// 動畫效果
+// ----------------------------------------------------------------------------
+
+// 波紋動畫
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+// 脈衝動畫
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 8px 32px var(--glass-shadow),
+      inset 0 1px 0 var(--glass-highlight);
+  }
+  50% {
+    box-shadow:
+      0 12px 48px rgba(99, 102, 241, 0.3),
+      inset 0 1px 0 var(--glass-highlight);
+  }
+}
+
+// 漂浮動畫
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+// 光影掃描動畫
+@keyframes shine-sweep {
+  0% {
+    transform: translateX(-100%) rotate(-45deg);
+  }
+  100% {
+    transform: translateX(100%) rotate(-45deg);
+  }
+}
+
+// 應用動畫的類別
+.liquid-glass-pulse {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.liquid-glass-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.liquid-glass-shine {
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 30%;
+    height: 200%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: shine-sweep 3s ease-in-out infinite;
+  }
+}
+
+// ----------------------------------------------------------------------------
+// 無邊框視窗樣式
+// ----------------------------------------------------------------------------
+
+.window-content {
+  border-radius: var(--glass-radius);
+  overflow: hidden;
+  background: transparent;
+}
+
+// 視窗拖曳區域
+.window-drag-region {
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.window-no-drag {
+  -webkit-app-region: no-drag;
 }
 
 // 基礎動畫
