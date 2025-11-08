@@ -6,18 +6,30 @@ import { WindowState } from '../shared/types/database';
 export class WindowManager {
   private mainWindow: BrowserWindow | null = null;
   private chatWindows: Map<string, BrowserWindow> = new Map();
-  private windowStateRepo: WindowStateRepository;
+  private windowStateRepo: WindowStateRepository | null = null;
   private saveStateTimeouts: Map<string, NodeJS.Timeout> = new Map();
 
   constructor() {
-    this.windowStateRepo = new WindowStateRepository();
+    // 延遲初始化 WindowStateRepository（在首次使用時才創建）
+    // 確保資料庫已初始化後再訪問
+  }
+
+  /**
+   * 延遲初始化 WindowStateRepository
+   * 在首次需要時才創建，確保資料庫已初始化
+   */
+  private getWindowStateRepository(): WindowStateRepository {
+    if (!this.windowStateRepo) {
+      this.windowStateRepo = new WindowStateRepository();
+    }
+    return this.windowStateRepo;
   }
 
   async createMainWindow(): Promise<BrowserWindow> {
     const { width, height } = screen.getPrimaryDisplay().workAreaSize;
 
     // 嘗試從資料庫恢復上次的視窗狀態
-    const savedState = this.windowStateRepo.getMainWindowState();
+    const savedState = this.getWindowStateRepository().getMainWindowState();
 
     const windowOptions: Electron.BrowserWindowConstructorOptions = {
       width: savedState?.width || Math.min(1200, width - 100),
@@ -56,7 +68,7 @@ export class WindowManager {
 
   createChatWindow(aiServiceId: string): BrowserWindow {
     // 嘗試恢復上次的視窗狀態
-    const savedState = this.windowStateRepo.findByAIServiceId(aiServiceId);
+    const savedState = this.getWindowStateRepository().findByAIServiceId(aiServiceId);
 
     const chatWindow = new BrowserWindow({
       width: savedState?.width || 1000,
@@ -177,7 +189,7 @@ export class WindowManager {
         isFullscreen,
       };
 
-      this.windowStateRepo.upsert(state);
+      this.getWindowStateRepository().upsert(state);
       console.log(`Window state saved for ${windowId}`);
     } catch (error) {
       console.error(`Failed to save window state for ${windowId}:`, error);
@@ -188,7 +200,7 @@ export class WindowManager {
    * 取得或恢復視窗狀態
    */
   public getWindowState(windowId: string): WindowState | null {
-    return this.windowStateRepo.findById(windowId);
+    return this.getWindowStateRepository().findById(windowId);
   }
 
   /**
