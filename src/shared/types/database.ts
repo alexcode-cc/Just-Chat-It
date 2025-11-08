@@ -89,3 +89,18 @@ export interface WindowState {
   createdAt: Date;
   updatedAt: Date;
 }
+
+/**
+ * 熱鍵設定介面
+ */
+export interface HotkeySettings {
+  id: string; // 熱鍵ID (show-main-panel, open-chatgpt, etc.)
+  name: string; // 顯示名稱
+  accelerator: string; // 熱鍵組合 (例如: CommandOrControl+Shift+Space)
+  description: string; // 描述
+  category: 'system' | 'ai-service' | 'custom'; // 分類
+  enabled: boolean; // 是否啟用
+  aiServiceId?: string; // 關聯的AI服務ID（如果是AI服務熱鍵）
+  createdAt: Date;
+  updatedAt: Date;
+}
