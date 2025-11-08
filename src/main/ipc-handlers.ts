@@ -8,6 +8,7 @@ import {
   HotkeySettingsRepository,
 } from './database/repositories';
 import { WindowManager } from './window-manager';
+import { ClipboardManager } from './system-integration';
 
 // 初始化 Repository 實例
 let aiServiceRepo: AIServiceRepository;
@@ -17,8 +18,9 @@ let promptRepo: PromptRepository;
 let windowStateRepo: WindowStateRepository;
 let hotkeySettingsRepo: HotkeySettingsRepository;
 let windowManager: WindowManager;
+let clipboardManager: ClipboardManager | null = null;
 
-export function setupIpcHandlers(manager?: WindowManager) {
+export function setupIpcHandlers(manager?: WindowManager, clipboard?: ClipboardManager) {
   // 初始化 Repository
   aiServiceRepo = new AIServiceRepository();
   chatSessionRepo = new ChatSessionRepository();
@@ -29,6 +31,10 @@ export function setupIpcHandlers(manager?: WindowManager) {
 
   if (manager) {
     windowManager = manager;
+  }
+
+  if (clipboard) {
+    clipboardManager = clipboard;
   }
 
   // 視窗控制
@@ -377,6 +383,96 @@ export function setupIpcHandlers(manager?: WindowManager) {
     } catch (error) {
       console.error('Error showing notification:', error);
       throw error;
+    }
+  });
+
+  // 剪貼簿管理
+  ipcMain.handle('clipboard:get-settings', async () => {
+    try {
+      if (!clipboardManager) {
+        return { enabled: true, autoFocus: true };
+      }
+      return clipboardManager.getSettings();
+    } catch (error) {
+      console.error('Error getting clipboard settings:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('clipboard:update-settings', async (event, settings: any) => {
+    try {
+      if (!clipboardManager) {
+        throw new Error('ClipboardManager not initialized');
+      }
+      clipboardManager.updateSettings(settings);
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating clipboard settings:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('clipboard:read', async () => {
+    try {
+      if (!clipboardManager) {
+        return clipboard.readText();
+      }
+      return clipboardManager.readClipboard();
+    } catch (error) {
+      console.error('Error reading clipboard:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('clipboard:write', async (event, text: string) => {
+    try {
+      if (!clipboardManager) {
+        clipboard.writeText(text);
+        return { success: true };
+      }
+      clipboardManager.writeClipboard(text);
+      return { success: true };
+    } catch (error) {
+      console.error('Error writing to clipboard:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('clipboard:clear', async () => {
+    try {
+      if (!clipboardManager) {
+        clipboard.clear();
+        return { success: true };
+      }
+      clipboardManager.clearClipboard();
+      return { success: true };
+    } catch (error) {
+      console.error('Error clearing clipboard:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('clipboard:get-last-content', async () => {
+    try {
+      if (!clipboardManager) {
+        return null;
+      }
+      return clipboardManager.getLastClipboardContent();
+    } catch (error) {
+      console.error('Error getting last clipboard content:', error);
+      return null;
+    }
+  });
+
+  ipcMain.handle('clipboard:is-monitoring', async () => {
+    try {
+      if (!clipboardManager) {
+        return false;
+      }
+      return clipboardManager.isActive();
+    } catch (error) {
+      console.error('Error checking clipboard monitoring status:', error);
+      return false;
     }
   });
 

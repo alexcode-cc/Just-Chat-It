@@ -3,7 +3,7 @@ import { WindowManager } from './window-manager';
 import { setupIpcHandlers } from './ipc-handlers';
 import { DatabaseManager } from './database/database-manager';
 import { initializeDefaultData } from './database/init-data';
-import { TrayManager, HotkeyManager } from './system-integration';
+import { TrayManager, HotkeyManager, ClipboardManager } from './system-integration';
 import { HotkeySettingsRepository } from './database/repositories';
 import path from 'path';
 
@@ -12,6 +12,7 @@ class Application {
   private dbManager: DatabaseManager;
   private trayManager: TrayManager | null = null;
   private hotkeyManager: HotkeyManager | null = null;
+  private clipboardManager: ClipboardManager | null = null;
 
   constructor() {
     this.windowManager = new WindowManager();
@@ -34,9 +35,6 @@ class Application {
     // 初始化預設資料（包含預設熱鍵設定）
     await initializeDefaultData();
 
-    // 設定 IPC handlers (傳入 windowManager)
-    setupIpcHandlers(this.windowManager);
-
     // 建立主視窗
     await this.windowManager.createMainWindow();
 
@@ -44,8 +42,21 @@ class Application {
     this.trayManager = new TrayManager(this.windowManager);
     this.trayManager.createTray();
 
-    // 初始化全域熱鍵
-    this.hotkeyManager = new HotkeyManager(this.windowManager);
+    // 初始化剪貼簿管理器
+    this.clipboardManager = new ClipboardManager(this.windowManager, {
+      enabled: true,
+      autoFocus: true,
+      monitorInterval: 500,
+    });
+
+    // 開始監控剪貼簿（根據設定）
+    this.clipboardManager.startMonitoring();
+
+    // 設定 IPC handlers (傳入 windowManager 和 clipboardManager)
+    setupIpcHandlers(this.windowManager, this.clipboardManager);
+
+    // 初始化全域熱鍵（傳入剪貼簿管理器）
+    this.hotkeyManager = new HotkeyManager(this.windowManager, this.clipboardManager);
 
     // 從資料庫載入自訂熱鍵設定
     const hotkeyRepo = new HotkeySettingsRepository();
@@ -95,6 +106,11 @@ class Application {
   }
 
   private onWillQuit() {
+    // 清理剪貼簿管理器
+    if (this.clipboardManager) {
+      this.clipboardManager.cleanup();
+    }
+
     // 清理全域熱鍵
     if (this.hotkeyManager) {
       this.hotkeyManager.cleanup();
