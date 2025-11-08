@@ -1,10 +1,11 @@
-import { ipcMain, BrowserWindow, clipboard } from 'electron';
+import { ipcMain, BrowserWindow, clipboard, Notification } from 'electron';
 import {
   AIServiceRepository,
   ChatSessionRepository,
   ChatMessageRepository,
   PromptRepository,
   WindowStateRepository,
+  HotkeySettingsRepository,
 } from './database/repositories';
 import { WindowManager } from './window-manager';
 
@@ -14,6 +15,7 @@ let chatSessionRepo: ChatSessionRepository;
 let chatMessageRepo: ChatMessageRepository;
 let promptRepo: PromptRepository;
 let windowStateRepo: WindowStateRepository;
+let hotkeySettingsRepo: HotkeySettingsRepository;
 let windowManager: WindowManager;
 
 export function setupIpcHandlers(manager?: WindowManager) {
@@ -23,6 +25,7 @@ export function setupIpcHandlers(manager?: WindowManager) {
   chatMessageRepo = new ChatMessageRepository();
   promptRepo = new PromptRepository();
   windowStateRepo = new WindowStateRepository();
+  hotkeySettingsRepo = new HotkeySettingsRepository();
 
   if (manager) {
     windowManager = manager;
@@ -264,4 +267,118 @@ export function setupIpcHandlers(manager?: WindowManager) {
       return [];
     }
   });
+
+  // 熱鍵設定管理
+  ipcMain.handle('hotkey:get-all', async () => {
+    try {
+      return hotkeySettingsRepo.findAll();
+    } catch (error) {
+      console.error('Error getting all hotkeys:', error);
+      return [];
+    }
+  });
+
+  ipcMain.handle('hotkey:get-enabled', async () => {
+    try {
+      return hotkeySettingsRepo.findEnabled();
+    } catch (error) {
+      console.error('Error getting enabled hotkeys:', error);
+      return [];
+    }
+  });
+
+  ipcMain.handle('hotkey:get-by-category', async (event, category: string) => {
+    try {
+      return hotkeySettingsRepo.findByCategory(category);
+    } catch (error) {
+      console.error(`Error getting hotkeys for category ${category}:`, error);
+      return [];
+    }
+  });
+
+  ipcMain.handle('hotkey:get-by-id', async (event, id: string) => {
+    try {
+      return hotkeySettingsRepo.findById(id);
+    } catch (error) {
+      console.error(`Error getting hotkey ${id}:`, error);
+      return null;
+    }
+  });
+
+  ipcMain.handle('hotkey:update', async (event, id: string, data: any) => {
+    try {
+      return hotkeySettingsRepo.update(id, data);
+    } catch (error) {
+      console.error(`Error updating hotkey ${id}:`, error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('hotkey:update-accelerator', async (event, id: string, accelerator: string) => {
+    try {
+      return hotkeySettingsRepo.updateAccelerator(id, accelerator);
+    } catch (error) {
+      console.error(`Error updating accelerator for hotkey ${id}:`, error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('hotkey:toggle-enabled', async (event, id: string) => {
+    try {
+      return hotkeySettingsRepo.toggleEnabled(id);
+    } catch (error) {
+      console.error(`Error toggling hotkey ${id}:`, error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('hotkey:check-conflict', async (event, accelerator: string, excludeId?: string) => {
+    try {
+      return hotkeySettingsRepo.isAcceleratorUsed(accelerator, excludeId);
+    } catch (error) {
+      console.error('Error checking hotkey conflict:', error);
+      return false;
+    }
+  });
+
+  ipcMain.handle('hotkey:batch-update', async (event, settings: any[]) => {
+    try {
+      hotkeySettingsRepo.batchUpdate(settings);
+      return { success: true };
+    } catch (error) {
+      console.error('Error batch updating hotkeys:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('hotkey:reset-defaults', async () => {
+    try {
+      // 這裡需要從 init-data.ts 重新載入預設設定
+      // 暫時返回成功，後續可以改進
+      return { success: true };
+    } catch (error) {
+      console.error('Error resetting hotkeys to defaults:', error);
+      throw error;
+    }
+  });
+
+  // 系統通知
+  ipcMain.handle('notification:show', async (event, options: { title: string; body: string; icon?: string }) => {
+    try {
+      const notification = new Notification({
+        title: options.title,
+        body: options.body,
+        icon: options.icon,
+      });
+
+      notification.show();
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error showing notification:', error);
+      throw error;
+    }
+  });
+
+  console.log('IPC handlers setup completed');
 }

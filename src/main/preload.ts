@@ -28,6 +28,35 @@ const electronAPI = {
   // 資料庫
   saveData: (table: string, data: any) => ipcRenderer.invoke('db:save', table, data),
   loadData: (table: string, query?: any) => ipcRenderer.invoke('db:load', table, query),
+
+  // 熱鍵設定管理
+  getAllHotkeys: () => ipcRenderer.invoke('hotkey:get-all'),
+  getEnabledHotkeys: () => ipcRenderer.invoke('hotkey:get-enabled'),
+  getHotkeysByCategory: (category: string) => ipcRenderer.invoke('hotkey:get-by-category', category),
+  getHotkeyById: (id: string) => ipcRenderer.invoke('hotkey:get-by-id', id),
+  updateHotkey: (id: string, data: any) => ipcRenderer.invoke('hotkey:update', id, data),
+  updateHotkeyAccelerator: (id: string, accelerator: string) =>
+    ipcRenderer.invoke('hotkey:update-accelerator', id, accelerator),
+  toggleHotkeyEnabled: (id: string) => ipcRenderer.invoke('hotkey:toggle-enabled', id),
+  checkHotkeyConflict: (accelerator: string, excludeId?: string) =>
+    ipcRenderer.invoke('hotkey:check-conflict', accelerator, excludeId),
+  batchUpdateHotkeys: (settings: any[]) => ipcRenderer.invoke('hotkey:batch-update', settings),
+  resetHotkeysToDefaults: () => ipcRenderer.invoke('hotkey:reset-defaults'),
+
+  // 系統通知
+  showNotification: (options: { title: string; body: string; icon?: string }) =>
+    ipcRenderer.invoke('notification:show', options),
+
+  // IPC 事件監聽
+  onNavigateTo: (callback: (route: string) => void) => {
+    ipcRenderer.on('navigate-to', (event, route) => callback(route));
+  },
+  onShowAbout: (callback: () => void) => {
+    ipcRenderer.on('show-about', () => callback());
+  },
+  onClipboardContent: (callback: (content: string) => void) => {
+    ipcRenderer.on('clipboard-content', (event, content) => callback(content));
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
