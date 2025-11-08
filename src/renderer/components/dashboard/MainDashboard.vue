@@ -24,6 +24,62 @@
         <p class="text-subtitle-1 text-medium-emphasis">多 AI 聊天桌面應用程式</p>
       </div>
 
+      <!-- AI 服務快速啟動 -->
+      <v-row class="mb-4">
+        <v-col cols="12">
+          <v-card ref="aiServicesCard" class="liquid-glass-card">
+            <v-card-title class="d-flex align-center justify-space-between">
+              <div class="d-flex align-center">
+                <v-icon class="mr-2" color="primary">mdi-robot</v-icon>
+                AI 服務
+              </div>
+              <v-chip :color="availableServices.length > 0 ? 'success' : 'error'" size="small">
+                {{ availableServices.length }} / {{ aiServices.length }} 可用
+              </v-chip>
+            </v-card-title>
+            <v-card-text>
+              <v-row>
+                <v-col
+                  v-for="service in aiServices"
+                  :key="service.id"
+                  cols="12"
+                  sm="6"
+                  md="4"
+                  lg="3"
+                >
+                  <v-card
+                    class="service-card liquid-glass-interactive"
+                    :class="{ disabled: !service.isAvailable }"
+                    @click="handleOpenAIService(service.id)"
+                  >
+                    <v-card-text class="text-center">
+                      <v-avatar size="48" class="mb-2">
+                        <v-icon v-if="!service.iconUrl" size="32" color="primary">
+                          mdi-robot
+                        </v-icon>
+                        <img v-else :src="service.iconUrl" :alt="service.name" />
+                      </v-avatar>
+                      <h4 class="text-h6 mb-1">{{ service.name }}</h4>
+                      <p class="text-caption text-grey mb-2">{{ service.description }}</p>
+                      <v-chip
+                        :color="service.isAvailable ? 'success' : 'error'"
+                        size="x-small"
+                        variant="flat"
+                      >
+                        {{ service.isAvailable ? '可用' : '不可用' }}
+                      </v-chip>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+              </v-row>
+              <v-alert v-if="aiServices.length === 0" type="info" class="mt-4">
+                正在載入 AI 服務...
+              </v-alert>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+
       <v-row>
         <v-col cols="12" md="6">
           <v-card ref="statusCard" class="liquid-glass-card mb-4">
@@ -81,21 +137,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useSettingsStore } from '@/stores/settings';
+import { useAIStore } from '@/stores/ai';
 import { LiquidGlassEffect } from '@/utils/liquid-glass-effect';
 import WindowControls from '@/components/common/WindowControls.vue';
 
 // Stores
 const settingsStore = useSettingsStore();
+const aiStore = useAIStore();
 
 // Refs
+const aiServicesCard = ref<HTMLElement | null>(null);
 const statusCard = ref<HTMLElement | null>(null);
 const planCard = ref<HTMLElement | null>(null);
 const demoCard = ref<HTMLElement | null>(null);
 
 // Liquid Glass effect instances
 let effects: LiquidGlassEffect[] = [];
+
+// Computed
+const aiServices = computed(() => aiStore.services);
+const availableServices = computed(() => aiStore.availableServices);
 
 // Data
 const completedItems = [
@@ -107,13 +170,15 @@ const completedItems = [
   { text: 'SQLite 資料庫層' },
   { text: 'Pinia 狀態管理' },
   { text: 'Liquid Glass 視覺效果系統' },
+  { text: '多視窗狀態持久化' },
+  { text: 'AI 服務整合系統' },
 ];
 
 const upcomingTasks = [
-  { id: 'Task 4', text: '建立多視窗管理系統' },
-  { id: 'Task 5', text: '實作 AI 服務整合系統' },
   { id: 'Task 6', text: '實作系統托盤和熱鍵功能' },
   { id: 'Task 7', text: '實作剪貼簿智能整合' },
+  { id: 'Task 8', text: '建立提示詞管理系統' },
+  { id: 'Task 9', text: '實作多 AI 比較功能' },
 ];
 
 // Methods
@@ -121,15 +186,26 @@ const toggleTheme = async () => {
   await settingsStore.toggleTheme();
 };
 
+const handleOpenAIService = async (serviceId: string) => {
+  try {
+    await aiStore.createChatWindow(serviceId);
+  } catch (error) {
+    console.error('Failed to open AI service:', error);
+  }
+};
+
 // Lifecycle
 onMounted(async () => {
   // 載入設定
   await settingsStore.loadSettings();
 
+  // 載入 AI 服務
+  await aiStore.loadAIServices();
+
   // 初始化 Liquid Glass 效果
   if (settingsStore.liquidGlassSettings.enabled) {
     // 為卡片元素添加效果
-    const cards = [statusCard.value, planCard.value, demoCard.value].filter(
+    const cards = [aiServicesCard.value, statusCard.value, planCard.value, demoCard.value].filter(
       (card): card is HTMLElement => card !== null
     );
 
@@ -142,7 +218,7 @@ onMounted(async () => {
       });
     });
 
-    // 為所有按鈕添加效果
+    // 為所有按鈕和服務卡片添加效果
     setTimeout(() => {
       const buttons = document.querySelectorAll<HTMLElement>('.liquid-glass-button');
       buttons.forEach((button) => {
@@ -152,6 +228,19 @@ onMounted(async () => {
             enableRipple: true,
             enableScrollEffect: false,
             lightIntensity: 0.4,
+          })
+        );
+      });
+
+      // 為 AI 服務卡片添加效果
+      const serviceCards = document.querySelectorAll<HTMLElement>('.service-card');
+      serviceCards.forEach((card) => {
+        effects.push(
+          new LiquidGlassEffect(card, {
+            enableMouseTracking: true,
+            enableRipple: true,
+            enableScrollEffect: false,
+            lightIntensity: 0.3,
           })
         );
       });
@@ -234,6 +323,23 @@ onUnmounted(() => {
   }
 }
 
+.service-card {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  &:hover:not(.disabled) {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+  }
+
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
 // 深色主題樣式
 :global(.dark-theme) {
   .liquid-glass-bg {
@@ -251,6 +357,11 @@ onUnmounted(() => {
     &:hover {
       background: rgba(255, 255, 255, 0.1);
     }
+  }
+
+  .service-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
   }
 }
 </style>
