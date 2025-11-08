@@ -1,0 +1,22 @@
+{
+  "appId": "com.alexcode.just-chat-it",
+  "productName": "Just Chat It",
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "dist/**/*",
+    "resources/**/*",
+    "package.json"
+  ],
+  "mac": {
+    "category": "public.app-category.productivity",
+    "target": "dmg"
+  },
+  "win": {
+    "target": "nsis"
+  },
+  "linux": {
+    "target": "AppImage"
+  }
+}
