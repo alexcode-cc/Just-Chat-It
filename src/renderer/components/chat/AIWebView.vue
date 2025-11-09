@@ -20,30 +20,13 @@
 
     <!-- 導航工具列 -->
     <div v-if="showNavigation" class="navigation-bar liquid-glass">
-      <v-btn
-        icon
-        size="small"
-        :disabled="!canGoBack"
-        @click="goBack"
-        title="後退"
-      >
+      <v-btn icon size="small" :disabled="!canGoBack" @click="goBack" title="後退">
         <v-icon>mdi-arrow-left</v-icon>
       </v-btn>
-      <v-btn
-        icon
-        size="small"
-        :disabled="!canGoForward"
-        @click="goForward"
-        title="前進"
-      >
+      <v-btn icon size="small" :disabled="!canGoForward" @click="goForward" title="前進">
         <v-icon>mdi-arrow-right</v-icon>
       </v-btn>
-      <v-btn
-        icon
-        size="small"
-        @click="reload"
-        title="重新載入"
-      >
+      <v-btn icon size="small" @click="reload" title="重新載入">
         <v-icon>mdi-reload</v-icon>
       </v-btn>
       <v-text-field
@@ -55,12 +38,7 @@
         class="flex-grow-1 mx-2"
         prepend-inner-icon="mdi-link"
       ></v-text-field>
-      <v-btn
-        icon
-        size="small"
-        @click="openInBrowser"
-        title="在瀏覽器中開啟"
-      >
+      <v-btn icon size="small" @click="openInBrowser" title="在瀏覽器中開啟">
         <v-icon>mdi-open-in-new</v-icon>
       </v-btn>
     </div>
@@ -95,7 +73,7 @@ const emit = defineEmits<{
   'load-start': [];
   'load-finish': [url: string];
   'load-error': [error: string];
-  'navigation': [url: string];
+  navigation: [url: string];
   'content-change': [content: string];
   'new-window': [url: string];
 }>();
@@ -316,12 +294,15 @@ defineExpose({
 });
 
 // 監聽 URL 變化
-watch(() => props.url, (newUrl) => {
-  if (webviewElement && newUrl !== currentUrl.value) {
-    webviewElement.src = newUrl;
-    currentUrl.value = newUrl;
+watch(
+  () => props.url,
+  (newUrl) => {
+    if (webviewElement && newUrl !== currentUrl.value) {
+      webviewElement.src = newUrl;
+      currentUrl.value = newUrl;
+    }
   }
-});
+);
 
 // 生命週期
 onMounted(async () => {

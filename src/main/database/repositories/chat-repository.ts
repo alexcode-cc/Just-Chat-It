@@ -35,7 +35,7 @@ export class ChatSessionRepository extends BaseRepository<ChatSession> {
   /**
    * 建立聊天會話
    */
-  public create(aiServiceId: string, title: string = '新聊天'): ChatSession {
+  public createSession(aiServiceId: string, title: string = '新聊天'): ChatSession {
     const session: ChatSession = {
       id: this.generateId(),
       aiServiceId,
@@ -45,15 +45,7 @@ export class ChatSessionRepository extends BaseRepository<ChatSession> {
       isActive: true,
     };
 
-    const row = this.entityToRow(session);
-    const stmt = this.db.prepare(`
-      INSERT INTO ${this.tableName}
-      (id, ai_service_id, title, created_at, updated_at, is_active)
-      VALUES (@id, @ai_service_id, @title, @created_at, @updated_at, @is_active)
-    `);
-
-    stmt.run(row);
-    return session;
+    return super.create(session);
   }
 
   /**
@@ -159,7 +151,7 @@ export class ChatMessageRepository extends BaseRepository<ChatMessage> {
   /**
    * 建立聊天訊息
    */
-  public create(
+  public createMessage(
     sessionId: string,
     content: string,
     isUser: boolean,
@@ -174,15 +166,7 @@ export class ChatMessageRepository extends BaseRepository<ChatMessage> {
       metadata,
     };
 
-    const row = this.entityToRow(message);
-    const stmt = this.db.prepare(`
-      INSERT INTO ${this.tableName}
-      (id, session_id, content, timestamp, is_user, metadata)
-      VALUES (@id, @session_id, @content, @timestamp, @is_user, @metadata)
-    `);
-
-    stmt.run(row);
-    return message;
+    return super.create(message);
   }
 
   /**

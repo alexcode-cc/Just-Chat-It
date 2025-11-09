@@ -1,13 +1,29 @@
 {
-  "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "target": "ES2020",
     "module": "ESNext",
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "target": "ES2020",
-    "outDir": "../../dist/renderer",
+    "allowJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "composite": true,
     "jsx": "preserve",
-    "types": ["vite/client", "node"]
+    "types": ["vite/client", "node", "vue"],
+    "baseUrl": "../..",
+    "paths": {
+      "@/*": ["src/renderer/*"],
+      "@main/*": ["src/main/*"],
+      "@shared/*": ["src/shared/*"],
+      "@assets/*": ["src/assets/*"]
+    }
   },
   "include": ["./**/*", "../shared/**/*"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "../../dist", "../../build"]
 }

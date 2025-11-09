@@ -22,8 +22,15 @@ const electronAPI = {
   getMainWindowState: () => ipcRenderer.invoke('window-state:get-main'),
   getAllChatWindowStates: () => ipcRenderer.invoke('window-state:get-all-chat'),
 
-  // 系統整合
-  readClipboard: () => ipcRenderer.invoke('system:read-clipboard'),
+  // 系統整合 - 剪貼簿
+  readClipboard: () => ipcRenderer.invoke('clipboard:read'),
+  writeClipboard: (text: string) => ipcRenderer.invoke('clipboard:write', text),
+  clearClipboard: () => ipcRenderer.invoke('clipboard:clear'),
+  getLastClipboardContent: () => ipcRenderer.invoke('clipboard:get-last-content'),
+  getClipboardSettings: () => ipcRenderer.invoke('clipboard:get-settings'),
+  updateClipboardSettings: (settings: any) =>
+    ipcRenderer.invoke('clipboard:update-settings', settings),
+  isClipboardMonitoring: () => ipcRenderer.invoke('clipboard:is-monitoring'),
 
   // 資料庫
   saveData: (table: string, data: any) => ipcRenderer.invoke('db:save', table, data),
@@ -32,7 +39,8 @@ const electronAPI = {
   // 熱鍵設定管理
   getAllHotkeys: () => ipcRenderer.invoke('hotkey:get-all'),
   getEnabledHotkeys: () => ipcRenderer.invoke('hotkey:get-enabled'),
-  getHotkeysByCategory: (category: string) => ipcRenderer.invoke('hotkey:get-by-category', category),
+  getHotkeysByCategory: (category: string) =>
+    ipcRenderer.invoke('hotkey:get-by-category', category),
   getHotkeyById: (id: string) => ipcRenderer.invoke('hotkey:get-by-id', id),
   updateHotkey: (id: string, data: any) => ipcRenderer.invoke('hotkey:update', id, data),
   updateHotkeyAccelerator: (id: string, accelerator: string) =>

@@ -78,12 +78,15 @@ export class TrayManager {
       { type: 'separator' },
       {
         label: 'AI 服務',
-        submenu: aiServiceMenuItems.length > 0 ? aiServiceMenuItems : [
-          {
-            label: '沒有可用的服務',
-            enabled: false,
-          },
-        ],
+        submenu:
+          aiServiceMenuItems.length > 0
+            ? aiServiceMenuItems
+            : [
+                {
+                  label: '沒有可用的服務',
+                  enabled: false,
+                },
+              ],
       },
       { type: 'separator' },
       {

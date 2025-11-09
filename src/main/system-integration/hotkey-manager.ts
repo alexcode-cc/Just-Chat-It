@@ -1,7 +1,7 @@
 import { globalShortcut, app } from 'electron';
 import { WindowManager } from '../window-manager';
 import { AIServiceRepository } from '../database/repositories';
-import { clipboard } from 'electron';
+import { ClipboardManager } from './clipboard-manager';
 
 /**
  * 熱鍵配置介面
@@ -34,12 +34,14 @@ export interface DefaultHotkeys {
 export class HotkeyManager {
   private windowManager: WindowManager;
   private aiServiceRepo: AIServiceRepository;
+  private clipboardManager: ClipboardManager | null;
   private registeredHotkeys: Map<string, HotkeyConfig> = new Map();
   private defaultHotkeys: DefaultHotkeys;
 
-  constructor(windowManager: WindowManager) {
+  constructor(windowManager: WindowManager, clipboardManager?: ClipboardManager) {
     this.windowManager = windowManager;
     this.aiServiceRepo = new AIServiceRepository();
+    this.clipboardManager = clipboardManager || null;
 
     // 預設熱鍵配置
     this.defaultHotkeys = {
@@ -253,7 +255,9 @@ export class HotkeyManager {
       mainWindow.focus();
 
       // 檢查剪貼簿內容（如果啟用）
-      this.checkClipboardAndFill();
+      if (this.clipboardManager) {
+        this.clipboardManager.checkAndFillToWindow(mainWindow);
+      }
     }
   }
 
@@ -289,35 +293,11 @@ export class HotkeyManager {
       }
 
       // 檢查剪貼簿內容（如果啟用）
-      this.checkClipboardAndFill(chatWindow);
-    } catch (error) {
-      console.error(`Failed to open chat window for ${serviceId}:`, error);
-    }
-  }
-
-  /**
-   * 檢查剪貼簿並填入內容
-   */
-  private checkClipboardAndFill(targetWindow?: Electron.BrowserWindow): void {
-    try {
-      const clipboardText = clipboard.readText();
-
-      if (clipboardText && clipboardText.trim().length > 0) {
-        console.log('Clipboard content detected:', clipboardText.substring(0, 50) + '...');
-
-        // 如果有目標視窗，發送剪貼簿內容
-        if (targetWindow) {
-          targetWindow.webContents.send('clipboard-content', clipboardText);
-        } else {
-          // 否則發送到主視窗
-          const mainWindow = this.windowManager.getMainWindow();
-          if (mainWindow) {
-            mainWindow.webContents.send('clipboard-content', clipboardText);
-          }
-        }
+      if (this.clipboardManager) {
+        this.clipboardManager.checkAndFillToWindow(chatWindow);
       }
     } catch (error) {
-      console.error('Error reading clipboard:', error);
+      console.error(`Failed to open chat window for ${serviceId}:`, error);
     }
   }
 

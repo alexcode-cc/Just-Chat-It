@@ -49,6 +49,38 @@ export abstract class BaseRepository<T> {
   }
 
   /**
+   * 建立新記錄
+   */
+  public create(entity: T): T {
+    const row = this.entityToRow(entity);
+    const columns = Object.keys(row);
+    const placeholders = columns.map(() => '?').join(', ');
+    const stmt = this.db.prepare(
+      `INSERT INTO ${this.tableName} (${columns.join(', ')}) VALUES (${placeholders})`
+    );
+    stmt.run(...Object.values(row));
+    return entity;
+  }
+
+  /**
+   * 更新記錄
+   */
+  public update(id: string, updates: Partial<T>): T {
+    const existing = this.findById(id);
+    if (!existing) {
+      throw new Error(`Record with id ${id} not found in ${this.tableName}`);
+    }
+
+    const updated = { ...existing, ...updates };
+    const row = this.entityToRow(updated);
+    const columns = Object.keys(row).filter((col) => col !== 'id');
+    const setClause = columns.map((col) => `${col} = ?`).join(', ');
+    const stmt = this.db.prepare(`UPDATE ${this.tableName} SET ${setClause} WHERE id = ?`);
+    stmt.run(...columns.map((col) => row[col]), id);
+    return updated;
+  }
+
+  /**
    * 刪除記錄
    */
   public delete(id: string): boolean {

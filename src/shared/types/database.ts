@@ -7,6 +7,8 @@ export interface AIService {
   displayName: string;
   webUrl: string;
   iconPath?: string;
+  iconUrl?: string; // Alias for iconPath for backward compatibility
+  description?: string;
   hotkey?: string;
   isAvailable: boolean;
   quotaResetTime?: Date;
@@ -24,6 +26,7 @@ export interface ChatSession {
   createdAt: Date;
   updatedAt: Date;
   isActive: boolean;
+  lastMessageAt?: Date; // Timestamp of the last message in this session
 }
 
 /**
@@ -35,6 +38,7 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   isUser: boolean;
+  role?: 'user' | 'assistant' | 'system'; // Message role for AI conversations
   metadata?: Record<string, any>;
 }
 

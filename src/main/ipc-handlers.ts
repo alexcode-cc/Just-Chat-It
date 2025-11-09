@@ -8,6 +8,7 @@ import {
   HotkeySettingsRepository,
 } from './database/repositories';
 import { WindowManager } from './window-manager';
+import { ClipboardManager } from './system-integration';
 
 // 初始化 Repository 實例
 let aiServiceRepo: AIServiceRepository;
@@ -17,8 +18,9 @@ let promptRepo: PromptRepository;
 let windowStateRepo: WindowStateRepository;
 let hotkeySettingsRepo: HotkeySettingsRepository;
 let windowManager: WindowManager;
+let clipboardManager: ClipboardManager | null = null;
 
-export function setupIpcHandlers(manager?: WindowManager) {
+export function setupIpcHandlers(manager?: WindowManager, clipboardMgr?: ClipboardManager) {
   // 初始化 Repository
   aiServiceRepo = new AIServiceRepository();
   chatSessionRepo = new ChatSessionRepository();
@@ -29,6 +31,10 @@ export function setupIpcHandlers(manager?: WindowManager) {
 
   if (manager) {
     windowManager = manager;
+  }
+
+  if (clipboardMgr) {
+    clipboardManager = clipboardMgr;
   }
 
   // 視窗控制
@@ -109,10 +115,10 @@ export function setupIpcHandlers(manager?: WindowManager) {
             }
             return chatSessionRepo.findById(data.id);
           }
-          return chatSessionRepo.create(data.aiServiceId, data.title);
+          return chatSessionRepo.createSession(data.aiServiceId, data.title);
 
         case 'chat_messages':
-          return chatMessageRepo.create(data.sessionId, data.content, data.isUser, data.metadata);
+          return chatMessageRepo.createMessage(data.sessionId, data.content, data.isUser, data.metadata);
 
         case 'prompts':
           if (data._delete) {
@@ -125,9 +131,9 @@ export function setupIpcHandlers(manager?: WindowManager) {
             if (data.usageCount !== undefined) {
               promptRepo.incrementUsage(data.id);
             }
-            return promptRepo.update(data.id, data);
+            return promptRepo.updatePrompt(data.id, data);
           }
-          return promptRepo.create(data.title, data.content, data.category, data.tags);
+          return promptRepo.createPrompt(data.title, data.content, data.category, data.tags);
 
         default:
           throw new Error(`Unknown table: ${table}`);
@@ -332,14 +338,17 @@ export function setupIpcHandlers(manager?: WindowManager) {
     }
   });
 
-  ipcMain.handle('hotkey:check-conflict', async (event, accelerator: string, excludeId?: string) => {
-    try {
-      return hotkeySettingsRepo.isAcceleratorUsed(accelerator, excludeId);
-    } catch (error) {
-      console.error('Error checking hotkey conflict:', error);
-      return false;
+  ipcMain.handle(
+    'hotkey:check-conflict',
+    async (event, accelerator: string, excludeId?: string) => {
+      try {
+        return hotkeySettingsRepo.isAcceleratorUsed(accelerator, excludeId);
+      } catch (error) {
+        console.error('Error checking hotkey conflict:', error);
+        return false;
+      }
     }
-  });
+  );
 
   ipcMain.handle('hotkey:batch-update', async (event, settings: any[]) => {
     try {
@@ -363,20 +372,113 @@ export function setupIpcHandlers(manager?: WindowManager) {
   });
 
   // 系統通知
-  ipcMain.handle('notification:show', async (event, options: { title: string; body: string; icon?: string }) => {
+  ipcMain.handle(
+    'notification:show',
+    async (event, options: { title: string; body: string; icon?: string }) => {
+      try {
+        const notification = new Notification({
+          title: options.title,
+          body: options.body,
+          icon: options.icon,
+        });
+
+        notification.show();
+
+        return { success: true };
+      } catch (error) {
+        console.error('Error showing notification:', error);
+        throw error;
+      }
+    }
+  );
+
+  // 剪貼簿管理
+  ipcMain.handle('clipboard:get-settings', async () => {
     try {
-      const notification = new Notification({
-        title: options.title,
-        body: options.body,
-        icon: options.icon,
-      });
+      if (!clipboardManager) {
+        return { enabled: true, autoFocus: true };
+      }
+      return clipboardManager.getSettings();
+    } catch (error) {
+      console.error('Error getting clipboard settings:', error);
+      throw error;
+    }
+  });
 
-      notification.show();
-
+  ipcMain.handle('clipboard:update-settings', async (event, settings: any) => {
+    try {
+      if (!clipboardManager) {
+        throw new Error('ClipboardManager not initialized');
+      }
+      clipboardManager.updateSettings(settings);
       return { success: true };
     } catch (error) {
-      console.error('Error showing notification:', error);
+      console.error('Error updating clipboard settings:', error);
       throw error;
+    }
+  });
+
+  ipcMain.handle('clipboard:read', async () => {
+    try {
+      if (!clipboardManager) {
+        return clipboard.readText();
+      }
+      return clipboardManager.readClipboard();
+    } catch (error) {
+      console.error('Error reading clipboard:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('clipboard:write', async (event, text: string) => {
+    try {
+      if (!clipboardManager) {
+        clipboard.writeText(text);
+        return { success: true };
+      }
+      clipboardManager.writeClipboard(text);
+      return { success: true };
+    } catch (error) {
+      console.error('Error writing to clipboard:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('clipboard:clear', async () => {
+    try {
+      if (!clipboardManager) {
+        clipboard.clear();
+        return { success: true };
+      }
+      clipboardManager.clearClipboard();
+      return { success: true };
+    } catch (error) {
+      console.error('Error clearing clipboard:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('clipboard:get-last-content', async () => {
+    try {
+      if (!clipboardManager) {
+        return null;
+      }
+      return clipboardManager.getLastClipboardContent();
+    } catch (error) {
+      console.error('Error getting last clipboard content:', error);
+      return null;
+    }
+  });
+
+  ipcMain.handle('clipboard:is-monitoring', async () => {
+    try {
+      if (!clipboardManager) {
+        return false;
+      }
+      return clipboardManager.isActive();
+    } catch (error) {
+      console.error('Error checking clipboard monitoring status:', error);
+      return false;
     }
   });
 

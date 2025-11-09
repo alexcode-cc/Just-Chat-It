@@ -39,7 +39,7 @@ export class PromptRepository extends BaseRepository<Prompt> {
   /**
    * 建立提示詞
    */
-  public create(
+  public createPrompt(
     title: string,
     content: string,
     category: string = 'general',
@@ -56,21 +56,13 @@ export class PromptRepository extends BaseRepository<Prompt> {
       isFavorite: false,
     };
 
-    const row = this.entityToRow(prompt);
-    const stmt = this.db.prepare(`
-      INSERT INTO ${this.tableName}
-      (id, title, content, category, tags, created_at, usage_count, is_favorite)
-      VALUES (@id, @title, @content, @category, @tags, @created_at, @usage_count, @is_favorite)
-    `);
-
-    stmt.run(row);
-    return prompt;
+    return super.create(prompt);
   }
 
   /**
    * 更新提示詞
    */
-  public update(
+  public updatePrompt(
     id: string,
     updates: Partial<Pick<Prompt, 'title' | 'content' | 'category' | 'tags'>>
   ): Prompt {

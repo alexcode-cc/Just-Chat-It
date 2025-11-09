@@ -1,14 +1,13 @@
 import { BaseRepository } from './base-repository';
 import { HotkeySettings } from '../../../shared/types/database';
-import Database from 'better-sqlite3';
 
 /**
  * 熱鍵設定 Repository
  * 負責管理熱鍵設定的資料庫操作
  */
 export class HotkeySettingsRepository extends BaseRepository<HotkeySettings> {
-  constructor(db?: Database.Database) {
-    super('hotkey_settings', db);
+  constructor() {
+    super('hotkey_settings');
   }
 
   /**
@@ -189,12 +188,7 @@ export class HotkeySettingsRepository extends BaseRepository<HotkeySettings> {
 
     this.db.transaction(() => {
       settings.forEach((setting) => {
-        updateStmt.run(
-          setting.accelerator,
-          setting.enabled ? 1 : 0,
-          now,
-          setting.id
-        );
+        updateStmt.run(setting.accelerator, setting.enabled ? 1 : 0, now, setting.id);
       });
     })();
   }
