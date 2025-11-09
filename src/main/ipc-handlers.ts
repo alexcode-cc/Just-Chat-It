@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow, clipboard, Notification } from 'electron';
+import { ipcMain, BrowserWindow, clipboard, Notification, shell } from 'electron';
 import {
   AIServiceRepository,
   ChatSessionRepository,
@@ -11,6 +11,8 @@ import {
 import { WindowManager } from './window-manager';
 import { ClipboardManager, NotificationManager } from './system-integration';
 import { contentCaptureManager } from './services/content-capture-manager';
+import { Logger, LogLevel } from './logging/logger';
+import { ErrorHandler } from './logging/error-handler';
 
 // 初始化 Repository 實例
 let aiServiceRepo: AIServiceRepository;
@@ -839,6 +841,135 @@ export function setupIpcHandlers(
       return { success: true, stats };
     } catch (error) {
       console.error('Error getting history stats:', error);
+      throw error;
+    }
+  });
+
+  // ==================== 日誌和錯誤處理 ====================
+
+  const logger = Logger.getInstance();
+  const errorHandler = ErrorHandler.getInstance();
+
+  /**
+   * 從渲染程序接收日誌
+   */
+  ipcMain.handle(
+    'log:write',
+    async (event, level: LogLevel, message: string, context?: any, error?: any) => {
+      try {
+        switch (level) {
+          case 'debug':
+            logger.debug(message, context);
+            break;
+          case 'info':
+            logger.info(message, context);
+            break;
+          case 'warn':
+            logger.warn(message, context, error);
+            break;
+          case 'error':
+            logger.error(message, error, context);
+            break;
+          case 'fatal':
+            logger.fatal(message, error, context);
+            break;
+        }
+        return { success: true };
+      } catch (err) {
+        console.error('Error writing log:', err);
+        throw err;
+      }
+    },
+  );
+
+  /**
+   * 取得日誌檔案列表
+   */
+  ipcMain.handle('log:get-files', async () => {
+    try {
+      const files = logger.getLogFiles();
+      return files;
+    } catch (error) {
+      console.error('Error getting log files:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 讀取日誌檔案
+   */
+  ipcMain.handle('log:read-file', async (event, filePath: string, maxLines?: number) => {
+    try {
+      const entries = logger.readLogFile(filePath, maxLines);
+      return entries;
+    } catch (error) {
+      console.error('Error reading log file:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 匯出日誌
+   */
+  ipcMain.handle('log:export', async () => {
+    try {
+      const exportPath = await logger.exportLogs();
+      return exportPath;
+    } catch (error) {
+      console.error('Error exporting logs:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 開啟日誌目錄
+   */
+  ipcMain.handle('log:open-directory', async () => {
+    try {
+      const logDir = logger.getLogDirectory();
+      await shell.openPath(logDir);
+      return { success: true };
+    } catch (error) {
+      console.error('Error opening log directory:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 取得錯誤統計
+   */
+  ipcMain.handle('error:get-stats', async () => {
+    try {
+      const stats = errorHandler.getStats();
+      return stats;
+    } catch (error) {
+      console.error('Error getting error stats:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 清除錯誤統計
+   */
+  ipcMain.handle('error:clear-stats', async () => {
+    try {
+      errorHandler.clearStats();
+      return { success: true };
+    } catch (error) {
+      console.error('Error clearing error stats:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 設定日誌等級
+   */
+  ipcMain.handle('log:set-level', async (event, level: LogLevel) => {
+    try {
+      logger.setLogLevel(level);
+      return { success: true };
+    } catch (error) {
+      console.error('Error setting log level:', error);
       throw error;
     }
   });

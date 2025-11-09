@@ -5,16 +5,24 @@ import { DatabaseManager } from './database/database-manager';
 import { initializeDefaultData } from './database/init-data';
 import { TrayManager, HotkeyManager, ClipboardManager } from './system-integration';
 import { HotkeySettingsRepository } from './database/repositories';
+import { Logger } from './logging/logger';
+import { ErrorHandler } from './logging/error-handler';
 import path from 'path';
 
 class Application {
   private windowManager: WindowManager;
   private dbManager: DatabaseManager;
+  private logger: Logger;
+  private errorHandler: ErrorHandler;
   private trayManager: TrayManager | null = null;
   private hotkeyManager: HotkeyManager | null = null;
   private clipboardManager: ClipboardManager | null = null;
 
   constructor() {
+    // 初始化日誌和錯誤處理
+    this.logger = Logger.getInstance();
+    this.errorHandler = ErrorHandler.getInstance();
+
     this.windowManager = new WindowManager();
     this.dbManager = DatabaseManager.getInstance();
     this.setupApp();
@@ -29,11 +37,16 @@ class Application {
   }
 
   private async onReady() {
-    // 初始化資料庫
-    this.dbManager.initialize();
+    try {
+      this.logger.info('Application starting...');
 
-    // 初始化預設資料（包含預設熱鍵設定）
-    await initializeDefaultData();
+      // 初始化資料庫
+      this.dbManager.initialize();
+      this.logger.info('Database initialized');
+
+      // 初始化預設資料（包含預設熱鍵設定）
+      await initializeDefaultData();
+      this.logger.info('Default data initialized');
 
     // 建立主視窗
     await this.windowManager.createMainWindow();
@@ -79,7 +92,14 @@ class Application {
       this.hotkeyManager.initialize();
     }
 
-    console.log('Application initialized successfully');
+      this.logger.info('Application initialized successfully');
+    } catch (error) {
+      this.logger.fatal('Failed to initialize application', error as Error);
+      this.errorHandler.handleError(error as Error, {
+        showDialog: true,
+        exitOnFatal: true,
+      });
+    }
   }
 
   private onWindowAllClosed() {
@@ -96,13 +116,16 @@ class Application {
   }
 
   private onBeforeQuit() {
-    console.log('Application is about to quit, cleaning up...');
+    this.logger.info('Application is about to quit, cleaning up...');
 
     // 清理視窗狀態追蹤並保存最後狀態
     this.windowManager.cleanup();
 
     // 關閉資料庫連接
     this.dbManager.close();
+
+    // 關閉日誌流
+    this.logger.close();
   }
 
   private onWillQuit() {
