@@ -5,3 +5,4 @@ export {
   type ClipboardSettings,
   type ClipboardContent,
 } from './clipboard-manager';
+export { NotificationManager, type NotificationOptions } from './notification-manager';

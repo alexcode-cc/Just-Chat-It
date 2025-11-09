@@ -6,9 +6,10 @@ import {
   PromptRepository,
   WindowStateRepository,
   HotkeySettingsRepository,
+  QuotaRepository,
 } from './database/repositories';
 import { WindowManager } from './window-manager';
-import { ClipboardManager } from './system-integration';
+import { ClipboardManager, NotificationManager } from './system-integration';
 
 // 初始化 Repository 實例
 let aiServiceRepo: AIServiceRepository;
@@ -17,10 +18,16 @@ let chatMessageRepo: ChatMessageRepository;
 let promptRepo: PromptRepository;
 let windowStateRepo: WindowStateRepository;
 let hotkeySettingsRepo: HotkeySettingsRepository;
+let quotaRepo: QuotaRepository;
 let windowManager: WindowManager;
 let clipboardManager: ClipboardManager | null = null;
+let notificationManager: NotificationManager | null = null;
 
-export function setupIpcHandlers(manager?: WindowManager, clipboardMgr?: ClipboardManager) {
+export function setupIpcHandlers(
+  manager?: WindowManager,
+  clipboardMgr?: ClipboardManager,
+  notificationMgr?: NotificationManager,
+) {
   // 初始化 Repository
   aiServiceRepo = new AIServiceRepository();
   chatSessionRepo = new ChatSessionRepository();
@@ -28,6 +35,7 @@ export function setupIpcHandlers(manager?: WindowManager, clipboardMgr?: Clipboa
   promptRepo = new PromptRepository();
   windowStateRepo = new WindowStateRepository();
   hotkeySettingsRepo = new HotkeySettingsRepository();
+  quotaRepo = new QuotaRepository();
 
   if (manager) {
     windowManager = manager;
@@ -35,6 +43,10 @@ export function setupIpcHandlers(manager?: WindowManager, clipboardMgr?: Clipboa
 
   if (clipboardMgr) {
     clipboardManager = clipboardMgr;
+  }
+
+  if (notificationMgr) {
+    notificationManager = notificationMgr;
   }
 
   // 視窗控制
@@ -479,6 +491,103 @@ export function setupIpcHandlers(manager?: WindowManager, clipboardMgr?: Clipboa
     } catch (error) {
       console.error('Error checking clipboard monitoring status:', error);
       return false;
+    }
+  });
+
+  // 額度追蹤管理
+  ipcMain.handle('quota:get-by-service', async (event, aiServiceId: string) => {
+    try {
+      return quotaRepo.getByAIServiceId(aiServiceId);
+    } catch (error) {
+      console.error('Error getting quota by service:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('quota:get-all', async () => {
+    try {
+      return quotaRepo.findAll();
+    } catch (error) {
+      console.error('Error getting all quotas:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('quota:mark-depleted', async (event, data: {
+    aiServiceId: string;
+    resetTime?: string;
+    notes?: string;
+  }) => {
+    try {
+      const resetDate = data.resetTime ? new Date(data.resetTime) : undefined;
+      return quotaRepo.markAsDepleted(data.aiServiceId, resetDate, data.notes);
+    } catch (error) {
+      console.error('Error marking quota as depleted:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('quota:mark-available', async (event, data: {
+    aiServiceId: string;
+    resetTime?: string;
+  }) => {
+    try {
+      const resetDate = data.resetTime ? new Date(data.resetTime) : undefined;
+      return quotaRepo.markAsAvailable(data.aiServiceId, resetDate);
+    } catch (error) {
+      console.error('Error marking quota as available:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('quota:update-reset-time', async (event, data: {
+    aiServiceId: string;
+    resetTime: string;
+  }) => {
+    try {
+      return quotaRepo.updateResetTime(data.aiServiceId, new Date(data.resetTime));
+    } catch (error) {
+      console.error('Error updating quota reset time:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('quota:update-notify-settings', async (event, data: {
+    aiServiceId: string;
+    notifyEnabled: boolean;
+    notifyBeforeMinutes?: number;
+  }) => {
+    try {
+      return quotaRepo.updateNotifySettings(
+        data.aiServiceId,
+        data.notifyEnabled,
+        data.notifyBeforeMinutes,
+      );
+    } catch (error) {
+      console.error('Error updating quota notify settings:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('quota:get-depleted', async () => {
+    try {
+      return quotaRepo.getDepletedQuotas();
+    } catch (error) {
+      console.error('Error getting depleted quotas:', error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('quota:trigger-check', async () => {
+    try {
+      if (notificationManager) {
+        notificationManager.triggerQuotaCheck();
+        return { success: true };
+      }
+      return { success: false, error: 'NotificationManager not initialized' };
+    } catch (error) {
+      console.error('Error triggering quota check:', error);
+      throw error;
     }
   });
 
