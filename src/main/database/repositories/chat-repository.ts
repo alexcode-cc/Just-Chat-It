@@ -28,14 +28,14 @@ export class ChatSessionRepository extends BaseRepository<ChatSession> {
       title: entity.title,
       created_at: entity.createdAt.toISOString(),
       updated_at: entity.updatedAt.toISOString(),
-      is_active: entity.isActive ? 1 : 0,
+      is_active: entity.isActive,
     };
   }
 
   /**
    * 建立聊天會話
    */
-  public createSession(aiServiceId: string, title: string = '新聊天'): ChatSession {
+  public async createSession(aiServiceId: string, title: string = '新聊天'): Promise<ChatSession> {
     const session: ChatSession = {
       id: this.generateId(),
       aiServiceId,
@@ -45,76 +45,76 @@ export class ChatSessionRepository extends BaseRepository<ChatSession> {
       isActive: true,
     };
 
-    return super.create(session);
+    return await super.create(session);
   }
 
   /**
    * 更新會話標題
    */
-  public updateTitle(id: string, title: string): void {
-    const stmt = this.db.prepare(`
+  public async updateTitle(id: string, title: string): Promise<void> {
+    const sql = `
       UPDATE ${this.tableName}
-      SET title = ?,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
+      SET title = $1,
+          updated_at = now()
+      WHERE id = $2
+    `;
 
-    stmt.run(title, id);
+    await this.client.query(sql, [title, id]);
   }
 
   /**
    * 更新會話的最後更新時間
    */
-  public touch(id: string): void {
-    const stmt = this.db.prepare(`
+  public async touch(id: string): Promise<void> {
+    const sql = `
       UPDATE ${this.tableName}
-      SET updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
+      SET updated_at = now()
+      WHERE id = $1
+    `;
 
-    stmt.run(id);
+    await this.client.query(sql, [id]);
   }
 
   /**
    * 根據AI服務ID查詢會話
    */
-  public findByAIService(aiServiceId: string): ChatSession[] {
-    const stmt = this.db.prepare(`
+  public async findByAIService(aiServiceId: string): Promise<ChatSession[]> {
+    const sql = `
       SELECT * FROM ${this.tableName}
-      WHERE ai_service_id = ?
+      WHERE ai_service_id = $1
       ORDER BY updated_at DESC
-    `);
+    `;
 
-    const rows = stmt.all(aiServiceId);
-    return rows.map((row) => this.rowToEntity(row));
+    const result = await this.client.query(sql, [aiServiceId]);
+    return result.rows.map((row) => this.rowToEntity(row));
   }
 
   /**
    * 查詢活躍的會話
    */
-  public findActiveSessions(): ChatSession[] {
-    const stmt = this.db.prepare(`
+  public async findActiveSessions(): Promise<ChatSession[]> {
+    const sql = `
       SELECT * FROM ${this.tableName}
-      WHERE is_active = 1
+      WHERE is_active = true
       ORDER BY updated_at DESC
-    `);
+    `;
 
-    const rows = stmt.all();
-    return rows.map((row) => this.rowToEntity(row));
+    const result = await this.client.query(sql);
+    return result.rows.map((row) => this.rowToEntity(row));
   }
 
   /**
    * 停用會話
    */
-  public deactivate(id: string): void {
-    const stmt = this.db.prepare(`
+  public async deactivate(id: string): Promise<void> {
+    const sql = `
       UPDATE ${this.tableName}
-      SET is_active = 0,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
+      SET is_active = false,
+          updated_at = now()
+      WHERE id = $1
+    `;
 
-    stmt.run(id);
+    await this.client.query(sql, [id]);
   }
 }
 
@@ -143,7 +143,7 @@ export class ChatMessageRepository extends BaseRepository<ChatMessage> {
       session_id: entity.sessionId,
       content: entity.content,
       timestamp: entity.timestamp.toISOString(),
-      is_user: entity.isUser ? 1 : 0,
+      is_user: entity.isUser,
       metadata: entity.metadata ? JSON.stringify(entity.metadata) : null,
     };
   }
@@ -151,12 +151,12 @@ export class ChatMessageRepository extends BaseRepository<ChatMessage> {
   /**
    * 建立聊天訊息
    */
-  public createMessage(
+  public async createMessage(
     sessionId: string,
     content: string,
     isUser: boolean,
     metadata?: Record<string, any>
-  ): ChatMessage {
+  ): Promise<ChatMessage> {
     const message: ChatMessage = {
       id: this.generateId(),
       sessionId,
@@ -166,16 +166,16 @@ export class ChatMessageRepository extends BaseRepository<ChatMessage> {
       metadata,
     };
 
-    return super.create(message);
+    return await super.create(message);
   }
 
   /**
    * 根據會話ID查詢訊息
    */
-  public findBySession(sessionId: string, limit?: number): ChatMessage[] {
+  public async findBySession(sessionId: string, limit?: number): Promise<ChatMessage[]> {
     let sql = `
       SELECT * FROM ${this.tableName}
-      WHERE session_id = ?
+      WHERE session_id = $1
       ORDER BY timestamp ASC
     `;
 
@@ -183,58 +183,56 @@ export class ChatMessageRepository extends BaseRepository<ChatMessage> {
       sql += ` LIMIT ${limit}`;
     }
 
-    const stmt = this.db.prepare(sql);
-    const rows = stmt.all(sessionId);
-    return rows.map((row) => this.rowToEntity(row));
+    const result = await this.client.query(sql, [sessionId]);
+    return result.rows.map((row) => this.rowToEntity(row));
   }
 
   /**
    * 搜尋訊息
    */
-  public search(query: string, sessionId?: string): ChatMessage[] {
+  public async search(query: string, sessionId?: string): Promise<ChatMessage[]> {
     let sql = `
       SELECT * FROM ${this.tableName}
-      WHERE content LIKE ?
+      WHERE content LIKE $1
     `;
 
     const params: any[] = [`%${query}%`];
 
     if (sessionId) {
-      sql += ` AND session_id = ?`;
+      sql += ` AND session_id = $2`;
       params.push(sessionId);
     }
 
     sql += ` ORDER BY timestamp DESC LIMIT 100`;
 
-    const stmt = this.db.prepare(sql);
-    const rows = stmt.all(...params);
-    return rows.map((row) => this.rowToEntity(row));
+    const result = await this.client.query(sql, params);
+    return result.rows.map((row) => this.rowToEntity(row));
   }
 
   /**
    * 刪除會話的所有訊息
    */
-  public deleteBySession(sessionId: string): number {
-    const stmt = this.db.prepare(`
+  public async deleteBySession(sessionId: string): Promise<number> {
+    const sql = `
       DELETE FROM ${this.tableName}
-      WHERE session_id = ?
-    `);
+      WHERE session_id = $1
+    `;
 
-    const result = stmt.run(sessionId);
-    return result.changes;
+    const result = await this.client.query(sql, [sessionId]);
+    return result.affectedRows || 0;
   }
 
   /**
    * 取得會話的訊息數量
    */
-  public countBySession(sessionId: string): number {
-    const stmt = this.db.prepare(`
+  public async countBySession(sessionId: string): Promise<number> {
+    const sql = `
       SELECT COUNT(*) as count
       FROM ${this.tableName}
-      WHERE session_id = ?
-    `);
+      WHERE session_id = $1
+    `;
 
-    const result = stmt.get(sessionId) as { count: number };
-    return result.count;
+    const result = await this.client.query(sql, [sessionId]);
+    return result.rows[0]?.count || 0;
   }
 }

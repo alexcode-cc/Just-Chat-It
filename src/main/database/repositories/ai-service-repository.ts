@@ -33,7 +33,7 @@ export class AIServiceRepository extends BaseRepository<AIService> {
       web_url: entity.webUrl,
       icon_path: entity.iconPath,
       hotkey: entity.hotkey,
-      is_available: entity.isAvailable ? 1 : 0,
+      is_available: entity.isAvailable,
       quota_reset_time: entity.quotaResetTime?.toISOString(),
       last_used: entity.lastUsed?.toISOString(),
       created_at: entity.createdAt.toISOString(),
@@ -43,41 +43,53 @@ export class AIServiceRepository extends BaseRepository<AIService> {
   /**
    * 建立或更新AI服務
    */
-  public upsert(service: Partial<AIService> & { id: string }): AIService {
-    const existingService = this.findById(service.id);
+  public async upsert(service: Partial<AIService> & { id: string }): Promise<AIService> {
+    const existingService = await this.findById(service.id);
 
     if (existingService) {
-      return this.update(service.id, service);
+      return await this.update(service.id, service);
     } else {
-      return this.create(service as Omit<AIService, 'createdAt'>);
+      return await this.create(service as AIService);
     }
   }
 
   /**
    * 建立AI服務
    */
-  public create(service: Omit<AIService, 'createdAt'>): AIService {
+  public async create(service: Omit<AIService, 'createdAt'>): Promise<AIService> {
     const newService: AIService = {
       ...service,
       createdAt: new Date(),
     };
 
     const row = this.entityToRow(newService);
-    const stmt = this.db.prepare(`
+    const sql = `
       INSERT INTO ${this.tableName}
       (id, name, display_name, web_url, icon_path, hotkey, is_available, quota_reset_time, last_used, created_at)
-      VALUES (@id, @name, @display_name, @web_url, @icon_path, @hotkey, @is_available, @quota_reset_time, @last_used, @created_at)
-    `);
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `;
 
-    stmt.run(row);
+    await this.client.query(sql, [
+      row.id,
+      row.name,
+      row.display_name,
+      row.web_url,
+      row.icon_path,
+      row.hotkey,
+      row.is_available,
+      row.quota_reset_time,
+      row.last_used,
+      row.created_at,
+    ]);
+
     return newService;
   }
 
   /**
    * 更新AI服務
    */
-  public update(id: string, updates: Partial<AIService>): AIService {
-    const existing = this.findById(id);
+  public async update(id: string, updates: Partial<AIService>): Promise<AIService> {
+    const existing = await this.findById(id);
     if (!existing) {
       throw new Error(`AI Service with id ${id} not found`);
     }
@@ -85,61 +97,76 @@ export class AIServiceRepository extends BaseRepository<AIService> {
     const updated = { ...existing, ...updates };
     const row = this.entityToRow(updated);
 
-    const stmt = this.db.prepare(`
+    const sql = `
       UPDATE ${this.tableName}
-      SET name = @name,
-          display_name = @display_name,
-          web_url = @web_url,
-          icon_path = @icon_path,
-          hotkey = @hotkey,
-          is_available = @is_available,
-          quota_reset_time = @quota_reset_time,
-          last_used = @last_used
-      WHERE id = @id
-    `);
+      SET name = $1,
+          display_name = $2,
+          web_url = $3,
+          icon_path = $4,
+          hotkey = $5,
+          is_available = $6,
+          quota_reset_time = $7,
+          last_used = $8
+      WHERE id = $9
+    `;
 
-    stmt.run(row);
+    await this.client.query(sql, [
+      row.name,
+      row.display_name,
+      row.web_url,
+      row.icon_path,
+      row.hotkey,
+      row.is_available,
+      row.quota_reset_time,
+      row.last_used,
+      id,
+    ]);
+
     return updated;
   }
 
   /**
    * 更新服務可用狀態
    */
-  public updateAvailability(id: string, isAvailable: boolean, quotaResetTime?: Date): void {
-    const stmt = this.db.prepare(`
+  public async updateAvailability(
+    id: string,
+    isAvailable: boolean,
+    quotaResetTime?: Date
+  ): Promise<void> {
+    const sql = `
       UPDATE ${this.tableName}
-      SET is_available = ?,
-          quota_reset_time = ?
-      WHERE id = ?
-    `);
+      SET is_available = $1,
+          quota_reset_time = $2
+      WHERE id = $3
+    `;
 
-    stmt.run(isAvailable ? 1 : 0, quotaResetTime?.toISOString(), id);
+    await this.client.query(sql, [isAvailable, quotaResetTime?.toISOString(), id]);
   }
 
   /**
    * 更新最後使用時間
    */
-  public updateLastUsed(id: string): void {
-    const stmt = this.db.prepare(`
+  public async updateLastUsed(id: string): Promise<void> {
+    const sql = `
       UPDATE ${this.tableName}
-      SET last_used = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
+      SET last_used = now()
+      WHERE id = $1
+    `;
 
-    stmt.run(id);
+    await this.client.query(sql, [id]);
   }
 
   /**
    * 取得可用的AI服務
    */
-  public findAvailableServices(): AIService[] {
-    const stmt = this.db.prepare(`
+  public async findAvailableServices(): Promise<AIService[]> {
+    const sql = `
       SELECT * FROM ${this.tableName}
-      WHERE is_available = 1
-      ORDER BY last_used DESC
-    `);
+      WHERE is_available = true
+      ORDER BY last_used DESC NULLS LAST
+    `;
 
-    const rows = stmt.all();
-    return rows.map((row) => this.rowToEntity(row));
+    const result = await this.client.query(sql);
+    return result.rows.map((row) => this.rowToEntity(row));
   }
 }
