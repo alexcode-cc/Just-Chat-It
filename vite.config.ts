@@ -22,6 +22,9 @@ export default defineConfig({
               external: ['electron', 'better-sqlite3'],
             },
           },
+          optimizeDeps: {
+            exclude: ['@electric-sql/pglite'],
+          },
         },
       },
       {
