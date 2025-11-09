@@ -13,6 +13,8 @@ import { ClipboardManager, NotificationManager } from './system-integration';
 import { contentCaptureManager } from './services/content-capture-manager';
 import { Logger, LogLevel } from './logging/logger';
 import { ErrorHandler } from './logging/error-handler';
+import { performanceMonitor, performanceOptimizer } from './performance';
+import { autoUpdaterManager } from './updater';
 
 // 初始化 Repository 實例
 let aiServiceRepo: AIServiceRepository;
@@ -970,6 +972,209 @@ export function setupIpcHandlers(
       return { success: true };
     } catch (error) {
       console.error('Error setting log level:', error);
+      throw error;
+    }
+  });
+
+  // ==================== 效能監控 ====================
+
+  /**
+   * 開始效能監控
+   */
+  ipcMain.handle('performance:start-monitoring', async () => {
+    try {
+      performanceMonitor.startMonitoring();
+      return { success: true };
+    } catch (error) {
+      console.error('Error starting performance monitoring:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 停止效能監控
+   */
+  ipcMain.handle('performance:stop-monitoring', async () => {
+    try {
+      performanceMonitor.stopMonitoring();
+      return { success: true };
+    } catch (error) {
+      console.error('Error stopping performance monitoring:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 取得效能報告
+   */
+  ipcMain.handle('performance:get-report', async () => {
+    try {
+      const report = await performanceMonitor.getPerformanceReport();
+      return report;
+    } catch (error) {
+      console.error('Error getting performance report:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 取得效能警告
+   */
+  ipcMain.handle('performance:get-warnings', async () => {
+    try {
+      const warnings = performanceMonitor.getWarnings();
+      return warnings;
+    } catch (error) {
+      console.error('Error getting performance warnings:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 清除效能警告
+   */
+  ipcMain.handle('performance:clear-warnings', async () => {
+    try {
+      performanceMonitor.clearWarnings();
+      return { success: true };
+    } catch (error) {
+      console.error('Error clearing performance warnings:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 取得效能監控配置
+   */
+  ipcMain.handle('performance:get-config', async () => {
+    try {
+      const config = performanceMonitor.getConfig();
+      return config;
+    } catch (error) {
+      console.error('Error getting performance config:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 更新效能監控配置
+   */
+  ipcMain.handle('performance:update-config', async (event, config: any) => {
+    try {
+      performanceMonitor.updateConfig(config);
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating performance config:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 執行記憶體優化
+   */
+  ipcMain.handle('performance:optimize-memory', async () => {
+    try {
+      await performanceMonitor.optimizeMemory();
+      return { success: true };
+    } catch (error) {
+      console.error('Error optimizing memory:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 分析效能並產生優化建議
+   */
+  ipcMain.handle('performance:analyze', async () => {
+    try {
+      const report = await performanceMonitor.getPerformanceReport();
+      const optimizations = performanceOptimizer.analyzeAndOptimize(report);
+      return optimizations;
+    } catch (error) {
+      console.error('Error analyzing performance:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 執行自動優化
+   */
+  ipcMain.handle('performance:auto-optimize', async () => {
+    try {
+      const report = await performanceMonitor.getPerformanceReport();
+      const optimizations = performanceOptimizer.analyzeAndOptimize(report);
+      const executedCount = await performanceOptimizer.executeAutoOptimizations(optimizations);
+      return { success: true, executedCount };
+    } catch (error) {
+      console.error('Error executing auto optimization:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 取得優化統計
+   */
+  ipcMain.handle('performance:get-stats', async () => {
+    try {
+      const report = await performanceMonitor.getPerformanceReport();
+      const stats = performanceOptimizer.getOptimizationStats(report);
+      return stats;
+    } catch (error) {
+      console.error('Error getting optimization stats:', error);
+      throw error;
+    }
+  });
+
+  // ==================== 自動更新 ====================
+
+  /**
+   * 檢查更新
+   */
+  ipcMain.handle('updater:check-for-updates', async () => {
+    try {
+      await autoUpdaterManager.checkForUpdates();
+      return { success: true };
+    } catch (error) {
+      console.error('Error checking for updates:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 下載更新
+   */
+  ipcMain.handle('updater:download-update', async () => {
+    try {
+      await autoUpdaterManager.downloadUpdate();
+      return { success: true };
+    } catch (error) {
+      console.error('Error downloading update:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 立即安裝更新
+   */
+  ipcMain.handle('updater:quit-and-install', async () => {
+    try {
+      autoUpdaterManager.quitAndInstall();
+      return { success: true };
+    } catch (error) {
+      console.error('Error installing update:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 取得目前版本
+   */
+  ipcMain.handle('updater:get-current-version', async () => {
+    try {
+      const version = autoUpdaterManager.getCurrentVersion();
+      return { version };
+    } catch (error) {
+      console.error('Error getting current version:', error);
       throw error;
     }
   });

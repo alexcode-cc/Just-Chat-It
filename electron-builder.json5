@@ -1,0 +1,155 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.alexcode.justchatit",
+  "productName": "Just Chat It",
+  "copyright": "Copyright © 2025 ${author}",
+
+  // 建置相關設定
+  "directories": {
+    "buildResources": "build",
+    "output": "dist-electron"
+  },
+
+  "files": [
+    "dist/**/*",
+    "package.json"
+  ],
+
+  "extraResources": [
+    {
+      "from": "resources",
+      "to": "resources",
+      "filter": ["**/*"]
+    }
+  ],
+
+  // 自動更新相關
+  "publish": {
+    "provider": "github",
+    "owner": "alexcode-cc",
+    "repo": "Just-Chat-It"
+  },
+
+  // Windows 配置
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64", "ia32"]
+      },
+      {
+        "target": "portable",
+        "arch": ["x64"]
+      }
+    ],
+    "icon": "build/icon.ico",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "requestedExecutionLevel": "asInvoker",
+    "signAndEditExecutable": false
+  },
+
+  // NSIS 安裝程式配置
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "allowElevation": true,
+    "installerIcon": "build/icon.ico",
+    "uninstallerIcon": "build/icon.ico",
+    "installerHeaderIcon": "build/icon.ico",
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "${productName}",
+    "perMachine": false,
+    "runAfterFinish": true,
+    "language": "2052", // 簡體中文
+    "multiLanguageInstaller": true
+  },
+
+  // macOS 配置
+  "mac": {
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["x64", "arm64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["x64", "arm64"]
+      }
+    ],
+    "icon": "build/icon.icns",
+    "category": "public.app-category.productivity",
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false,
+    "entitlements": "build/entitlements.mac.plist",
+    "entitlementsInherit": "build/entitlements.mac.plist",
+    "extendInfo": {
+      "NSCameraUsageDescription": "Just Chat It 需要存取相機以進行視訊對話",
+      "NSMicrophoneUsageDescription": "Just Chat It 需要存取麥克風以進行語音輸入",
+      "NSAppleEventsUsageDescription": "Just Chat It 需要執行 AppleScript 以實現系統整合"
+    }
+  },
+
+  // DMG 配置
+  "dmg": {
+    "background": "build/dmg-background.png",
+    "iconSize": 100,
+    "contents": [
+      {
+        "x": 130,
+        "y": 220
+      },
+      {
+        "x": 410,
+        "y": 220,
+        "type": "link",
+        "path": "/Applications"
+      }
+    ],
+    "window": {
+      "width": 540,
+      "height": 380
+    }
+  },
+
+  // Linux 配置
+  "linux": {
+    "target": [
+      "AppImage",
+      "deb",
+      "rpm"
+    ],
+    "icon": "build/icons",
+    "category": "Utility",
+    "maintainer": "alexcode.cc@outlook.com",
+    "vendor": "AlexCode",
+    "synopsis": "現代化的多 AI 聊天桌面應用程式",
+    "description": "Just Chat It 是一個功能強大的桌面應用程式，讓您可以同時與多個 AI 服務對話，包括 ChatGPT、Claude、Gemini 等。",
+    "executableName": "just-chat-it"
+  },
+
+  // AppImage 配置
+  "appImage": {
+    "license": "LICENSE"
+  },
+
+  // Debian 配置
+  "deb": {
+    "depends": [
+      "gconf2",
+      "gconf-service",
+      "libnotify4",
+      "libappindicator1",
+      "libxtst6",
+      "libnss3"
+    ]
+  },
+
+  // 壓縮配置
+  "compression": "maximum",
+
+  // 建置前後腳本
+  "beforeBuild": "scripts/before-build.js",
+  "afterPack": "scripts/after-pack.js",
+  "afterSign": "scripts/after-sign.js"
+}
