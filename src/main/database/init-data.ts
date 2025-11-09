@@ -11,14 +11,14 @@ export async function initializeDefaultData(): Promise<void> {
     const hotkeyRepo = new HotkeySettingsRepository();
 
     // 檢查是否已有AI服務資料
-    const existingServices = aiServiceRepo.findAll();
+    const existingServices = await aiServiceRepo.findAll();
 
     if (existingServices.length === 0) {
       // 初始化預設的AI服務
       console.log('Initializing default AI services...');
 
       for (const serviceConfig of DEFAULT_AI_SERVICES) {
-        aiServiceRepo.create({
+        await aiServiceRepo.create({
           id: serviceConfig.id,
           name: serviceConfig.name,
           displayName: serviceConfig.displayName,
@@ -37,7 +37,7 @@ export async function initializeDefaultData(): Promise<void> {
     }
 
     // 檢查是否已有熱鍵設定
-    const existingHotkeys = hotkeyRepo.findAll();
+    const existingHotkeys = await hotkeyRepo.findAll();
 
     if (existingHotkeys.length === 0) {
       // 初始化預設熱鍵設定
@@ -123,7 +123,7 @@ export async function initializeDefaultData(): Promise<void> {
       ];
 
       for (const hotkey of defaultHotkeys) {
-        hotkeyRepo.create(hotkey);
+        await hotkeyRepo.create(hotkey);
         console.log(`Created hotkey: ${hotkey.name} (${hotkey.accelerator})`);
       }
 

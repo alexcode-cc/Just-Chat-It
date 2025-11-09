@@ -1,21 +1,23 @@
-import Database from 'better-sqlite3';
+import { PGlite } from '@electric-sql/pglite';
 import path from 'path';
 import { app } from 'electron';
 import { CREATE_TABLES_SQL, CREATE_INDEXES_SQL } from './schema';
 import { DB_NAME } from '../../shared/constants/database';
 
 /**
- * SQLite 資料庫管理類別
+ * PGlite 資料庫管理類別
  */
 export class DatabaseManager {
   private static instance: DatabaseManager;
-  private db: Database.Database | null = null;
+  private client: PGlite | null = null;
   private dbPath: string;
+  private isInitialized = false;
 
   private constructor() {
     // 取得使用者資料目錄
     const userDataPath = app.getPath('userData');
-    this.dbPath = path.join(userDataPath, DB_NAME);
+    // PGlite 使用目錄而非單一檔案
+    this.dbPath = path.join(userDataPath, 'database');
   }
 
   /**
@@ -29,28 +31,27 @@ export class DatabaseManager {
   }
 
   /**
-   * 初始化資料庫連接
+   * 初始化資料庫連接（異步）
    */
-  public initialize(): void {
-    if (this.db) {
+  public async initialize(): Promise<void> {
+    if (this.isInitialized && this.client) {
       return; // 已經初始化
     }
 
     try {
-      this.db = new Database(this.dbPath);
+      // 創建 PGlite 實例
+      this.client = new PGlite(this.dbPath);
 
-      // 啟用外鍵約束
-      this.db.pragma('foreign_keys = ON');
-
-      // 設定 WAL 模式以提升效能
-      this.db.pragma('journal_mode = WAL');
+      // 等待客戶端就緒
+      await this.client.waitReady;
 
       // 建立所有表格
-      this.createTables();
+      await this.createTables();
 
       // 建立索引
-      this.createIndexes();
+      await this.createIndexes();
 
+      this.isInitialized = true;
       console.log(`Database initialized at: ${this.dbPath}`);
     } catch (error) {
       console.error('Failed to initialize database:', error);
@@ -61,15 +62,20 @@ export class DatabaseManager {
   /**
    * 建立所有資料表
    */
-  private createTables(): void {
-    if (!this.db) {
-      throw new Error('Database not initialized');
+  private async createTables(): Promise<void> {
+    if (!this.client) {
+      throw new Error('Database client not initialized');
     }
 
     const tables = Object.values(CREATE_TABLES_SQL);
-    tables.forEach((sql) => {
-      this.db!.exec(sql);
-    });
+    for (const sql of tables) {
+      try {
+        await this.client.exec(sql);
+      } catch (error) {
+        console.error('Error creating table:', error);
+        throw error;
+      }
+    }
 
     console.log('All tables created successfully');
   }
@@ -77,36 +83,42 @@ export class DatabaseManager {
   /**
    * 建立所有索引
    */
-  private createIndexes(): void {
-    if (!this.db) {
-      throw new Error('Database not initialized');
+  private async createIndexes(): Promise<void> {
+    if (!this.client) {
+      throw new Error('Database client not initialized');
     }
 
     const indexes = Object.values(CREATE_INDEXES_SQL);
-    indexes.forEach((sql) => {
-      this.db!.exec(sql);
-    });
+    for (const sql of indexes) {
+      try {
+        await this.client.exec(sql);
+      } catch (error) {
+        console.error('Error creating index:', error);
+        throw error;
+      }
+    }
 
     console.log('All indexes created successfully');
   }
 
   /**
-   * 取得資料庫連接
+   * 取得資料庫客戶端
    */
-  public getDatabase(): Database.Database {
-    if (!this.db) {
+  public getClient(): PGlite {
+    if (!this.client || !this.isInitialized) {
       throw new Error('Database not initialized. Call initialize() first.');
     }
-    return this.db;
+    return this.client;
   }
 
   /**
    * 關閉資料庫連接
    */
-  public close(): void {
-    if (this.db) {
-      this.db.close();
-      this.db = null;
+  public async close(): Promise<void> {
+    if (this.client) {
+      await this.client.close();
+      this.client = null;
+      this.isInitialized = false;
       console.log('Database connection closed');
     }
   }
@@ -114,24 +126,48 @@ export class DatabaseManager {
   /**
    * 執行事務
    */
-  public transaction<T>(fn: (db: Database.Database) => T): T {
-    const db = this.getDatabase();
-    const transaction = db.transaction(fn);
-    return transaction(db);
+  public async transaction<T>(fn: (client: PGlite) => Promise<T>): Promise<T> {
+    const client = this.getClient();
+
+    try {
+      await client.exec('BEGIN');
+      const result = await fn(client);
+      await client.exec('COMMIT');
+      return result;
+    } catch (error) {
+      await client.exec('ROLLBACK');
+      throw error;
+    }
   }
 
   /**
-   * 備份資料庫
+   * 執行查詢
    */
-  public async backup(backupPath: string): Promise<void> {
-    const db = this.getDatabase();
-    return new Promise((resolve, reject) => {
-      db.backup(backupPath)
-        .then(() => {
-          console.log(`Database backed up to: ${backupPath}`);
-          resolve();
-        })
-        .catch(reject);
-    });
+  public async query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
+    const client = this.getClient();
+
+    try {
+      const result = await client.query<T>(sql, params);
+      return result.rows;
+    } catch (error) {
+      console.error('Query error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 執行單行查詢
+   */
+  public async queryOne<T = any>(sql: string, params: any[] = []): Promise<T | null> {
+    const rows = await this.query<T>(sql, params);
+    return rows.length > 0 ? rows[0] : null;
+  }
+
+  /**
+   * 執行 SQL（無返回值）
+   */
+  public async exec(sql: string): Promise<void> {
+    const client = this.getClient();
+    await client.exec(sql);
   }
 }

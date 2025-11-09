@@ -148,6 +148,9 @@
   // 壓縮配置
   "compression": "maximum",
 
+  // 不重建原生模組（PGlite 是純 WASM，無需編譯）
+  "npmRebuild": false,
+
   // 建置前後腳本
   "beforeBuild": "scripts/before-build.js",
   "afterPack": "scripts/after-pack.js",

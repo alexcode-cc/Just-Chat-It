@@ -1,33 +1,33 @@
 /**
- * 資料庫表格建立腳本
+ * 資料庫表格建立腳本 (PostgreSQL)
  */
 
 export const CREATE_TABLES_SQL = {
   // AI服務表
   aiServices: `
     CREATE TABLE IF NOT EXISTS ai_services (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      display_name TEXT NOT NULL,
+      id VARCHAR(255) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      display_name VARCHAR(255) NOT NULL,
       web_url TEXT NOT NULL,
       icon_path TEXT,
-      hotkey TEXT,
-      is_available INTEGER DEFAULT 1,
-      quota_reset_time TEXT,
-      last_used TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      hotkey VARCHAR(100),
+      is_available BOOLEAN DEFAULT true,
+      quota_reset_time TIMESTAMP,
+      last_used TIMESTAMP,
+      created_at TIMESTAMP DEFAULT now()
     )
   `,
 
   // 聊天會話表
   chatSessions: `
     CREATE TABLE IF NOT EXISTS chat_sessions (
-      id TEXT PRIMARY KEY,
-      ai_service_id TEXT NOT NULL,
+      id VARCHAR(255) PRIMARY KEY,
+      ai_service_id VARCHAR(255) NOT NULL,
       title TEXT NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      is_active INTEGER DEFAULT 1,
+      created_at TIMESTAMP DEFAULT now(),
+      updated_at TIMESTAMP DEFAULT now(),
+      is_active BOOLEAN DEFAULT true,
       FOREIGN KEY (ai_service_id) REFERENCES ai_services(id)
     )
   `,
@@ -35,11 +35,11 @@ export const CREATE_TABLES_SQL = {
   // 聊天訊息表
   chatMessages: `
     CREATE TABLE IF NOT EXISTS chat_messages (
-      id TEXT PRIMARY KEY,
-      session_id TEXT NOT NULL,
+      id VARCHAR(255) PRIMARY KEY,
+      session_id VARCHAR(255) NOT NULL,
       content TEXT NOT NULL,
-      timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
-      is_user INTEGER NOT NULL,
+      timestamp TIMESTAMP DEFAULT now(),
+      is_user BOOLEAN NOT NULL,
       metadata TEXT,
       FOREIGN KEY (session_id) REFERENCES chat_sessions(id)
     )
@@ -48,42 +48,42 @@ export const CREATE_TABLES_SQL = {
   // 提示詞表
   prompts: `
     CREATE TABLE IF NOT EXISTS prompts (
-      id TEXT PRIMARY KEY,
-      title TEXT NOT NULL,
+      id VARCHAR(255) PRIMARY KEY,
+      title VARCHAR(500) NOT NULL,
       content TEXT NOT NULL,
-      category TEXT DEFAULT 'general',
+      category VARCHAR(100) DEFAULT 'general',
       tags TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT now(),
       usage_count INTEGER DEFAULT 0,
-      is_favorite INTEGER DEFAULT 0
+      is_favorite BOOLEAN DEFAULT false
     )
   `,
 
   // 應用程式設定表
   appSettings: `
     CREATE TABLE IF NOT EXISTS app_settings (
-      key TEXT PRIMARY KEY,
+      key VARCHAR(255) PRIMARY KEY,
       value TEXT NOT NULL,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      updated_at TIMESTAMP DEFAULT now()
     )
   `,
 
   // 視窗狀態表
   windowStates: `
     CREATE TABLE IF NOT EXISTS window_states (
-      id TEXT PRIMARY KEY,
-      window_type TEXT NOT NULL,
-      ai_service_id TEXT,
+      id VARCHAR(255) PRIMARY KEY,
+      window_type VARCHAR(100) NOT NULL,
+      ai_service_id VARCHAR(255),
       x INTEGER NOT NULL,
       y INTEGER NOT NULL,
       width INTEGER NOT NULL,
       height INTEGER NOT NULL,
-      is_maximized INTEGER DEFAULT 0,
-      is_minimized INTEGER DEFAULT 0,
-      is_fullscreen INTEGER DEFAULT 0,
-      session_id TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      is_maximized BOOLEAN DEFAULT false,
+      is_minimized BOOLEAN DEFAULT false,
+      is_fullscreen BOOLEAN DEFAULT false,
+      session_id VARCHAR(255),
+      created_at TIMESTAMP DEFAULT now(),
+      updated_at TIMESTAMP DEFAULT now(),
       FOREIGN KEY (ai_service_id) REFERENCES ai_services(id),
       FOREIGN KEY (session_id) REFERENCES chat_sessions(id)
     )
@@ -92,15 +92,15 @@ export const CREATE_TABLES_SQL = {
   // 熱鍵設定表
   hotkeySettings: `
     CREATE TABLE IF NOT EXISTS hotkey_settings (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      accelerator TEXT NOT NULL,
+      id VARCHAR(255) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      accelerator VARCHAR(100) NOT NULL,
       description TEXT,
-      category TEXT NOT NULL,
-      enabled INTEGER DEFAULT 1,
-      ai_service_id TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      category VARCHAR(100) NOT NULL,
+      enabled BOOLEAN DEFAULT true,
+      ai_service_id VARCHAR(255),
+      created_at TIMESTAMP DEFAULT now(),
+      updated_at TIMESTAMP DEFAULT now(),
       FOREIGN KEY (ai_service_id) REFERENCES ai_services(id)
     )
   `,
@@ -108,26 +108,26 @@ export const CREATE_TABLES_SQL = {
   // 比較會話表
   comparisonSessions: `
     CREATE TABLE IF NOT EXISTS comparison_sessions (
-      id TEXT PRIMARY KEY,
-      title TEXT NOT NULL,
+      id VARCHAR(255) PRIMARY KEY,
+      title VARCHAR(500) NOT NULL,
       prompt_content TEXT NOT NULL,
       ai_service_ids TEXT NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMP DEFAULT now(),
+      updated_at TIMESTAMP DEFAULT now()
     )
   `,
 
   // 比較結果表
   comparisonResults: `
     CREATE TABLE IF NOT EXISTS comparison_results (
-      id TEXT PRIMARY KEY,
-      comparison_session_id TEXT NOT NULL,
-      ai_service_id TEXT NOT NULL,
+      id VARCHAR(255) PRIMARY KEY,
+      comparison_session_id VARCHAR(255) NOT NULL,
+      ai_service_id VARCHAR(255) NOT NULL,
       response TEXT NOT NULL,
       response_time INTEGER,
-      status TEXT DEFAULT 'pending',
+      status VARCHAR(50) DEFAULT 'pending',
       error_message TEXT,
-      timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+      timestamp TIMESTAMP DEFAULT now(),
       metadata TEXT,
       FOREIGN KEY (comparison_session_id) REFERENCES comparison_sessions(id),
       FOREIGN KEY (ai_service_id) REFERENCES ai_services(id)
@@ -137,17 +137,17 @@ export const CREATE_TABLES_SQL = {
   // 額度追蹤表
   quotaTracking: `
     CREATE TABLE IF NOT EXISTS quota_tracking (
-      id TEXT PRIMARY KEY,
-      ai_service_id TEXT NOT NULL,
-      quota_status TEXT DEFAULT 'unknown',
-      quota_reset_time TEXT,
+      id VARCHAR(255) PRIMARY KEY,
+      ai_service_id VARCHAR(255) NOT NULL,
+      quota_status VARCHAR(50) DEFAULT 'unknown',
+      quota_reset_time TIMESTAMP,
       notify_before_minutes INTEGER DEFAULT 60,
-      notify_enabled INTEGER DEFAULT 1,
-      last_notified_at TEXT,
-      marked_depleted_at TEXT,
+      notify_enabled BOOLEAN DEFAULT true,
+      last_notified_at TIMESTAMP,
+      marked_depleted_at TIMESTAMP,
       notes TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT now(),
+      updated_at TIMESTAMP DEFAULT now(),
       FOREIGN KEY (ai_service_id) REFERENCES ai_services(id)
     )
   `,

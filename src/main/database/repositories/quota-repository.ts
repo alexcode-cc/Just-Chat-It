@@ -5,11 +5,10 @@
 import { randomUUID } from 'crypto';
 import { BaseRepository } from './base-repository';
 import { QuotaTracking } from '../../../shared/types/database';
-import { Database } from 'better-sqlite3';
 
 export class QuotaRepository extends BaseRepository<QuotaTracking> {
-  constructor(db: Database) {
-    super(db, 'quota_tracking');
+  constructor() {
+    super('quota_tracking');
   }
 
   /**
@@ -41,7 +40,7 @@ export class QuotaRepository extends BaseRepository<QuotaTracking> {
       quota_status: entity.quotaStatus,
       quota_reset_time: entity.quotaResetTime?.toISOString(),
       notify_before_minutes: entity.notifyBeforeMinutes,
-      notify_enabled: entity.notifyEnabled ? 1 : 0,
+      notify_enabled: entity.notifyEnabled,
       last_notified_at: entity.lastNotifiedAt?.toISOString(),
       marked_depleted_at: entity.markedDepletedAt?.toISOString(),
       notes: entity.notes,
@@ -53,23 +52,23 @@ export class QuotaRepository extends BaseRepository<QuotaTracking> {
   /**
    * 根據AI服務ID獲取額度追蹤
    */
-  getByAIServiceId(aiServiceId: string): QuotaTracking | undefined {
-    const stmt = this.db.prepare(`
+  async getByAIServiceId(aiServiceId: string): Promise<QuotaTracking | undefined> {
+    const sql = `
       SELECT * FROM ${this.tableName}
-      WHERE ai_service_id = ?
-      ORDER BY updated_at DESC
+      WHERE ai_service_id = $1
+      ORDER BY updated_at DESC NULLS LAST
       LIMIT 1
-    `);
+    `;
 
-    const row = stmt.get(aiServiceId);
-    return row ? this.rowToEntity(row) : undefined;
+    const result = await this.client.query(sql, [aiServiceId]);
+    return result.rows[0] ? this.rowToEntity(result.rows[0]) : undefined;
   }
 
   /**
    * 更新或創建額度追蹤（Upsert）
    */
-  upsert(quota: Partial<QuotaTracking> & { aiServiceId: string }): QuotaTracking {
-    const existing = this.getByAIServiceId(quota.aiServiceId);
+  async upsert(quota: Partial<QuotaTracking> & { aiServiceId: string }): Promise<QuotaTracking> {
+    const existing = await this.getByAIServiceId(quota.aiServiceId);
 
     if (existing) {
       // 更新現有記錄
@@ -79,7 +78,7 @@ export class QuotaRepository extends BaseRepository<QuotaTracking> {
         id: existing.id,
         updatedAt: new Date(),
       };
-      this.update(updated);
+      await this.update(updated);
       return updated;
     } else {
       // 創建新記錄
@@ -96,7 +95,7 @@ export class QuotaRepository extends BaseRepository<QuotaTracking> {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      this.create(newQuota);
+      await this.create(newQuota);
       return newQuota;
     }
   }
@@ -104,8 +103,8 @@ export class QuotaRepository extends BaseRepository<QuotaTracking> {
   /**
    * 標記額度為已用盡
    */
-  markAsDepleted(aiServiceId: string, resetTime?: Date, notes?: string): QuotaTracking {
-    return this.upsert({
+  async markAsDepleted(aiServiceId: string, resetTime?: Date, notes?: string): Promise<QuotaTracking> {
+    return await this.upsert({
       aiServiceId,
       quotaStatus: 'depleted',
       quotaResetTime: resetTime,
@@ -117,8 +116,8 @@ export class QuotaRepository extends BaseRepository<QuotaTracking> {
   /**
    * 標記額度為可用
    */
-  markAsAvailable(aiServiceId: string, resetTime?: Date): QuotaTracking {
-    return this.upsert({
+  async markAsAvailable(aiServiceId: string, resetTime?: Date): Promise<QuotaTracking> {
+    return await this.upsert({
       aiServiceId,
       quotaStatus: 'available',
       quotaResetTime: resetTime,
@@ -129,13 +128,13 @@ export class QuotaRepository extends BaseRepository<QuotaTracking> {
   /**
    * 更新額度重置時間
    */
-  updateResetTime(aiServiceId: string, resetTime: Date): QuotaTracking | undefined {
-    const existing = this.getByAIServiceId(aiServiceId);
+  async updateResetTime(aiServiceId: string, resetTime: Date): Promise<QuotaTracking | undefined> {
+    const existing = await this.getByAIServiceId(aiServiceId);
     if (!existing) {
       return undefined;
     }
 
-    return this.upsert({
+    return await this.upsert({
       aiServiceId,
       quotaResetTime: resetTime,
     });
@@ -144,12 +143,12 @@ export class QuotaRepository extends BaseRepository<QuotaTracking> {
   /**
    * 更新通知設定
    */
-  updateNotifySettings(
+  async updateNotifySettings(
     aiServiceId: string,
     notifyEnabled: boolean,
     notifyBeforeMinutes?: number,
-  ): QuotaTracking {
-    return this.upsert({
+  ): Promise<QuotaTracking> {
+    return await this.upsert({
       aiServiceId,
       notifyEnabled,
       notifyBeforeMinutes,
@@ -159,13 +158,13 @@ export class QuotaRepository extends BaseRepository<QuotaTracking> {
   /**
    * 記錄已發送通知
    */
-  markAsNotified(aiServiceId: string): QuotaTracking | undefined {
-    const existing = this.getByAIServiceId(aiServiceId);
+  async markAsNotified(aiServiceId: string): Promise<QuotaTracking | undefined> {
+    const existing = await this.getByAIServiceId(aiServiceId);
     if (!existing) {
       return undefined;
     }
 
-    return this.upsert({
+    return await this.upsert({
       aiServiceId,
       lastNotifiedAt: new Date(),
     });
@@ -175,58 +174,58 @@ export class QuotaRepository extends BaseRepository<QuotaTracking> {
    * 獲取需要通知的額度追蹤
    * （額度重置時間在指定分鐘內且尚未通知）
    */
-  getQuotasNeedingNotification(now = new Date()): QuotaTracking[] {
-    const stmt = this.db.prepare(`
+  async getQuotasNeedingNotification(now = new Date()): Promise<QuotaTracking[]> {
+    const sql = `
       SELECT * FROM ${this.tableName}
-      WHERE notify_enabled = 1
+      WHERE notify_enabled = true
         AND quota_reset_time IS NOT NULL
         AND quota_status = 'depleted'
         AND (
           last_notified_at IS NULL
-          OR datetime(quota_reset_time) != datetime(last_notified_at, '+' || notify_before_minutes || ' minutes')
+          OR quota_reset_time != last_notified_at + (notify_before_minutes || ' minutes')::interval
         )
-        AND datetime(quota_reset_time) <= datetime(?, '+' || notify_before_minutes || ' minutes')
-        AND datetime(quota_reset_time) > datetime(?)
+        AND quota_reset_time <= $1::timestamp + (notify_before_minutes || ' minutes')::interval
+        AND quota_reset_time > $2::timestamp
       ORDER BY quota_reset_time ASC
-    `);
+    `;
 
-    const rows = stmt.all(now.toISOString(), now.toISOString());
-    return rows.map((row) => this.rowToEntity(row));
+    const result = await this.client.query(sql, [now.toISOString(), now.toISOString()]);
+    return result.rows.map((row) => this.rowToEntity(row));
   }
 
   /**
    * 獲取所有已用盡且有重置時間的額度追蹤
    */
-  getDepletedQuotas(): QuotaTracking[] {
-    const stmt = this.db.prepare(`
+  async getDepletedQuotas(): Promise<QuotaTracking[]> {
+    const sql = `
       SELECT * FROM ${this.tableName}
       WHERE quota_status = 'depleted'
         AND quota_reset_time IS NOT NULL
       ORDER BY quota_reset_time ASC
-    `);
+    `;
 
-    const rows = stmt.all();
-    return rows.map((row) => this.rowToEntity(row));
+    const result = await this.client.query(sql);
+    return result.rows.map((row) => this.rowToEntity(row));
   }
 
   /**
    * 檢查額度是否已重置（重置時間已過）
    * 如果已重置，自動更新狀態為可用
    */
-  checkAndUpdateExpiredQuotas(now = new Date()): QuotaTracking[] {
-    const stmt = this.db.prepare(`
+  async checkAndUpdateExpiredQuotas(now = new Date()): Promise<QuotaTracking[]> {
+    const sql = `
       SELECT * FROM ${this.tableName}
       WHERE quota_status = 'depleted'
         AND quota_reset_time IS NOT NULL
-        AND datetime(quota_reset_time) <= datetime(?)
-    `);
+        AND quota_reset_time <= $1::timestamp
+    `;
 
-    const rows = stmt.all(now.toISOString());
-    const expiredQuotas = rows.map((row) => this.rowToEntity(row));
+    const result = await this.client.query(sql, [now.toISOString()]);
+    const expiredQuotas = result.rows.map((row) => this.rowToEntity(row));
 
     // 更新所有已過期的額度為可用狀態
     for (const quota of expiredQuotas) {
-      this.markAsAvailable(quota.aiServiceId);
+      await this.markAsAvailable(quota.aiServiceId);
     }
 
     return expiredQuotas;
@@ -235,11 +234,11 @@ export class QuotaRepository extends BaseRepository<QuotaTracking> {
   /**
    * 初始化所有AI服務的額度追蹤（如果不存在）
    */
-  initializeForAIServices(aiServiceIds: string[]): void {
+  async initializeForAIServices(aiServiceIds: string[]): Promise<void> {
     for (const serviceId of aiServiceIds) {
-      const existing = this.getByAIServiceId(serviceId);
+      const existing = await this.getByAIServiceId(serviceId);
       if (!existing) {
-        this.upsert({
+        await this.upsert({
           aiServiceId: serviceId,
           quotaStatus: 'unknown',
           notifyBeforeMinutes: 60,

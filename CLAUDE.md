@@ -63,7 +63,7 @@ npm run format
 - **TypeScript**: 類型安全開發
 - **Vite**: 現代化建置工具
 - **Pinia**: 狀態管理
-- **SQLite**: 本地資料庫
+- **PGlite**: 本地資料庫（PostgreSQL WASM）
 
 ### 架構模式
 - **主程序 (Main Process)**: 處理應用生命週期、多視窗管理、系統整合、資料庫操作
@@ -78,7 +78,7 @@ src/
 │   ├── window-manager.ts   # 視窗管理
 │   ├── ipc-handlers.ts     # IPC 事件處理
 │   ├── system-integration/ # 系統整合（托盤、熱鍵、剪貼簿）
-│   └── database/           # SQLite 資料庫管理
+│   └── database/           # PGlite 資料庫管理
 ├── renderer/               # Vue 渲染程序
 │   ├── components/         # Vue 組件
 │   │   ├── common/         # 通用組件
@@ -113,7 +113,7 @@ src/
 - **SettingsStore**: 應用程式設定
 
 ### 資料庫設計
-SQLite 表格（共 9 個）：
+PGlite (PostgreSQL WASM) 表格（共 9 個）：
 - `ai_services`: AI 服務配置
 - `chat_sessions`: 聊天會話
 - `chat_messages`: 聊天訊息
@@ -263,10 +263,11 @@ SQLite 表格（共 9 個）：
 
 ### 關鍵技術決策
 
-1. **SQLite WAL 模式**
-   - 啟用 WAL 模式提升並發效能
-   - 定期 checkpoint 控制 WAL 檔案大小
-   - 使用 prepared statements 防止 SQL 注入
+1. **PGlite 資料庫**
+   - 使用 PostgreSQL WASM 實作，無需原生編譯
+   - 異步 API 設計，所有 Repository 方法使用 async/await
+   - 使用參數化查詢（$1, $2...）防止 SQL 注入
+   - 支援完整的 PostgreSQL 功能
 
 2. **WebView 隔離策略**
    - 使用 partition 機制隔離各 AI 服務
@@ -291,7 +292,8 @@ SQLite 表格（共 9 個）：
    - Pinia actions 中避免直接修改其他 Store 的 state
 
 3. **打包與分發**
-   - 原生依賴（如 better-sqlite3）需要為所有平台編譯
+   - PGlite 是純 WASM 實作，無需原生模組編譯（解決 Windows 建置問題）
+   - electron-builder 設定 `npmRebuild: false`
    - macOS 公證需要 Apple Developer 帳號
    - Windows 防毒軟體可能誤報，需要程式碼簽署
    - 測試所有平台的安裝和更新流程

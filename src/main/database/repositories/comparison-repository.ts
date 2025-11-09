@@ -34,28 +34,25 @@ export class ComparisonSessionRepository extends BaseRepository<ComparisonSessio
   /**
    * 根據建立時間排序取得會話列表
    */
-  public findAllOrdered(limit?: number): ComparisonSession[] {
+  public async findAllOrdered(limit?: number): Promise<ComparisonSession[]> {
     let sql = `SELECT * FROM ${this.tableName} ORDER BY created_at DESC`;
     if (limit) {
       sql += ` LIMIT ${limit}`;
     }
-    const stmt = this.db.prepare(sql);
-    const rows = stmt.all();
-    return rows.map((row) => this.rowToEntity(row));
+    const result = await this.client.query(sql);
+    return result.rows.map((row) => this.rowToEntity(row));
   }
 
   /**
    * 搜尋會話（根據標題或提示詞內容）
    */
-  public search(keyword: string): ComparisonSession[] {
-    const stmt = this.db.prepare(
-      `SELECT * FROM ${this.tableName}
-       WHERE title LIKE ? OR prompt_content LIKE ?
-       ORDER BY created_at DESC`
-    );
+  public async search(keyword: string): Promise<ComparisonSession[]> {
+    const sql = `SELECT * FROM ${this.tableName}
+       WHERE title LIKE $1 OR prompt_content LIKE $2
+       ORDER BY created_at DESC`;
     const searchTerm = `%${keyword}%`;
-    const rows = stmt.all(searchTerm, searchTerm);
-    return rows.map((row) => this.rowToEntity(row));
+    const result = await this.client.query(sql, [searchTerm, searchTerm]);
+    return result.rows.map((row) => this.rowToEntity(row));
   }
 }
 
@@ -98,59 +95,51 @@ export class ComparisonResultRepository extends BaseRepository<ComparisonResult>
   /**
    * 根據會話ID取得所有結果
    */
-  public findBySessionId(sessionId: string): ComparisonResult[] {
-    const stmt = this.db.prepare(
-      `SELECT * FROM ${this.tableName} WHERE comparison_session_id = ? ORDER BY timestamp ASC`
-    );
-    const rows = stmt.all(sessionId);
-    return rows.map((row) => this.rowToEntity(row));
+  public async findBySessionId(sessionId: string): Promise<ComparisonResult[]> {
+    const sql = `SELECT * FROM ${this.tableName} WHERE comparison_session_id = $1 ORDER BY timestamp ASC`;
+    const result = await this.client.query(sql, [sessionId]);
+    return result.rows.map((row) => this.rowToEntity(row));
   }
 
   /**
    * 根據會話ID和AI服務ID取得結果
    */
-  public findBySessionAndService(sessionId: string, serviceId: string): ComparisonResult | null {
-    const stmt = this.db.prepare(
-      `SELECT * FROM ${this.tableName}
-       WHERE comparison_session_id = ? AND ai_service_id = ?
-       ORDER BY timestamp DESC LIMIT 1`
-    );
-    const row = stmt.get(sessionId, serviceId);
-    return row ? this.rowToEntity(row) : null;
+  public async findBySessionAndService(sessionId: string, serviceId: string): Promise<ComparisonResult | null> {
+    const sql = `SELECT * FROM ${this.tableName}
+       WHERE comparison_session_id = $1 AND ai_service_id = $2
+       ORDER BY timestamp DESC LIMIT 1`;
+    const result = await this.client.query(sql, [sessionId, serviceId]);
+    return result.rows[0] ? this.rowToEntity(result.rows[0]) : null;
   }
 
   /**
    * 更新結果狀態
    */
-  public updateStatus(
+  public async updateStatus(
     id: string,
     status: 'pending' | 'loading' | 'success' | 'error',
     errorMessage?: string
-  ): void {
-    const stmt = this.db.prepare(
-      `UPDATE ${this.tableName} SET status = ?, error_message = ? WHERE id = ?`
-    );
-    stmt.run(status, errorMessage || null, id);
+  ): Promise<void> {
+    const sql = `UPDATE ${this.tableName} SET status = $1, error_message = $2 WHERE id = $3`;
+    await this.client.query(sql, [status, errorMessage || null, id]);
   }
 
   /**
    * 刪除會話的所有結果
    */
-  public deleteBySessionId(sessionId: string): number {
-    const stmt = this.db.prepare(`DELETE FROM ${this.tableName} WHERE comparison_session_id = ?`);
-    const result = stmt.run(sessionId);
-    return result.changes;
+  public async deleteBySessionId(sessionId: string): Promise<number> {
+    const sql = `DELETE FROM ${this.tableName} WHERE comparison_session_id = $1`;
+    const result = await this.client.query(sql, [sessionId]);
+    return result.affectedRows || 0;
   }
 
   /**
    * 取得成功的結果數量
    */
-  public countSuccessfulBySession(sessionId: string): number {
-    const stmt = this.db.prepare(
-      `SELECT COUNT(*) as count FROM ${this.tableName}
-       WHERE comparison_session_id = ? AND status = 'success'`
-    );
-    const result = stmt.get(sessionId) as { count: number };
-    return result.count;
+  public async countSuccessfulBySession(sessionId: string): Promise<number> {
+    const sql = `SELECT COUNT(*) as count FROM ${this.tableName}
+       WHERE comparison_session_id = $1 AND status = 'success'`;
+    const result = await this.client.query(sql, [sessionId]);
+    return result.rows[0]?.count || 0;
   }
 }

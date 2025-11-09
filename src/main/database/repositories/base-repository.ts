@@ -1,16 +1,16 @@
-import Database from 'better-sqlite3';
+import { PGlite } from '@electric-sql/pglite';
 import { DatabaseManager } from '../database-manager';
 
 /**
- * Repository 基礎類別
+ * Repository 基礎類別（PGlite 異步版本）
  */
 export abstract class BaseRepository<T> {
-  protected db: Database.Database;
+  protected client: PGlite;
   protected tableName: string;
 
   constructor(tableName: string) {
     this.tableName = tableName;
-    this.db = DatabaseManager.getInstance().getDatabase();
+    this.client = DatabaseManager.getInstance().getClient();
   }
 
   /**
@@ -31,42 +31,49 @@ export abstract class BaseRepository<T> {
   protected abstract entityToRow(entity: T): any;
 
   /**
+   * 將 ? 參數轉換為 PostgreSQL $1, $2, ... 格式
+   */
+  protected convertPlaceholders(sql: string): string {
+    let index = 1;
+    return sql.replace(/\?/g, () => `$${index++}`);
+  }
+
+  /**
    * 查詢所有記錄
    */
-  public findAll(): T[] {
-    const stmt = this.db.prepare(`SELECT * FROM ${this.tableName}`);
-    const rows = stmt.all();
-    return rows.map((row) => this.rowToEntity(row));
+  public async findAll(): Promise<T[]> {
+    const sql = `SELECT * FROM ${this.tableName}`;
+    const result = await this.client.query(sql);
+    return result.rows.map((row) => this.rowToEntity(row));
   }
 
   /**
    * 根據ID查詢
    */
-  public findById(id: string): T | null {
-    const stmt = this.db.prepare(`SELECT * FROM ${this.tableName} WHERE id = ?`);
-    const row = stmt.get(id);
-    return row ? this.rowToEntity(row) : null;
+  public async findById(id: string): Promise<T | null> {
+    const sql = `SELECT * FROM ${this.tableName} WHERE id = $1`;
+    const result = await this.client.query(sql, [id]);
+    return result.rows.length > 0 ? this.rowToEntity(result.rows[0]) : null;
   }
 
   /**
    * 建立新記錄
    */
-  public create(entity: T): T {
+  public async create(entity: T): Promise<T> {
     const row = this.entityToRow(entity);
     const columns = Object.keys(row);
-    const placeholders = columns.map(() => '?').join(', ');
-    const stmt = this.db.prepare(
-      `INSERT INTO ${this.tableName} (${columns.join(', ')}) VALUES (${placeholders})`
-    );
-    stmt.run(...Object.values(row));
+    const placeholders = columns.map((_, idx) => `$${idx + 1}`).join(', ');
+    const sql = `INSERT INTO ${this.tableName} (${columns.join(', ')}) VALUES (${placeholders})`;
+
+    await this.client.query(sql, Object.values(row));
     return entity;
   }
 
   /**
    * 更新記錄
    */
-  public update(id: string, updates: Partial<T>): T {
-    const existing = this.findById(id);
+  public async update(id: string, updates: Partial<T>): Promise<T> {
+    const existing = await this.findById(id);
     if (!existing) {
       throw new Error(`Record with id ${id} not found in ${this.tableName}`);
     }
@@ -74,27 +81,46 @@ export abstract class BaseRepository<T> {
     const updated = { ...existing, ...updates };
     const row = this.entityToRow(updated);
     const columns = Object.keys(row).filter((col) => col !== 'id');
-    const setClause = columns.map((col) => `${col} = ?`).join(', ');
-    const stmt = this.db.prepare(`UPDATE ${this.tableName} SET ${setClause} WHERE id = ?`);
-    stmt.run(...columns.map((col) => row[col]), id);
+    const setClause = columns.map((col, idx) => `${col} = $${idx + 1}`).join(', ');
+    const sql = `UPDATE ${this.tableName} SET ${setClause} WHERE id = $${columns.length + 1}`;
+
+    const values = [...columns.map((col) => row[col]), id];
+    await this.client.query(sql, values);
     return updated;
   }
 
   /**
    * 刪除記錄
    */
-  public delete(id: string): boolean {
-    const stmt = this.db.prepare(`DELETE FROM ${this.tableName} WHERE id = ?`);
-    const result = stmt.run(id);
-    return result.changes > 0;
+  public async delete(id: string): Promise<boolean> {
+    const sql = `DELETE FROM ${this.tableName} WHERE id = $1`;
+    const result = await this.client.query(sql, [id]);
+    return (result.affectedRows ?? 0) > 0;
   }
 
   /**
    * 計算記錄數量
    */
-  public count(): number {
-    const stmt = this.db.prepare(`SELECT COUNT(*) as count FROM ${this.tableName}`);
-    const result = stmt.get() as { count: number };
-    return result.count;
+  public async count(): Promise<number> {
+    const sql = `SELECT COUNT(*) as count FROM ${this.tableName}`;
+    const result = await this.client.query<{ count: string }>(sql);
+    return parseInt(result.rows[0]?.count || '0', 10);
+  }
+
+  /**
+   * 執行自定義查詢
+   */
+  protected async query<R = any>(sql: string, params: any[] = []): Promise<R[]> {
+    const convertedSql = this.convertPlaceholders(sql);
+    const result = await this.client.query<R>(convertedSql, params);
+    return result.rows;
+  }
+
+  /**
+   * 執行單行查詢
+   */
+  protected async queryOne<R = any>(sql: string, params: any[] = []): Promise<R | null> {
+    const rows = await this.query<R>(sql, params);
+    return rows.length > 0 ? rows[0] : null;
   }
 }

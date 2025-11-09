@@ -43,8 +43,8 @@ class Application {
     try {
       this.logger.info('Application starting...');
 
-      // 初始化資料庫
-      this.dbManager.initialize();
+      // 初始化資料庫（異步）
+      await this.dbManager.initialize();
       this.logger.info('Database initialized');
 
       // 初始化預設資料（包含預設熱鍵設定）
@@ -79,7 +79,7 @@ class Application {
 
     // 從資料庫載入自訂熱鍵設定
     const hotkeyRepo = new HotkeySettingsRepository();
-    const enabledHotkeys = hotkeyRepo.findEnabled();
+    const enabledHotkeys = await hotkeyRepo.findEnabled();
 
     if (enabledHotkeys.length > 0) {
       // 使用自訂設定
@@ -130,13 +130,13 @@ class Application {
     }
   }
 
-  private onActivate() {
+  private async onActivate() {
     if (BrowserWindow.getAllWindows().length === 0) {
-      this.windowManager.createMainWindow();
+      await this.windowManager.createMainWindow();
     }
   }
 
-  private onBeforeQuit() {
+  private async onBeforeQuit() {
     this.logger.info('Application is about to quit, cleaning up...');
 
     // 停止效能監控
@@ -148,8 +148,8 @@ class Application {
     // 清理視窗狀態追蹤並保存最後狀態
     this.windowManager.cleanup();
 
-    // 關閉資料庫連接
-    this.dbManager.close();
+    // 關閉資料庫連接（異步）
+    await this.dbManager.close();
 
     // 關閉日誌流
     this.logger.close();

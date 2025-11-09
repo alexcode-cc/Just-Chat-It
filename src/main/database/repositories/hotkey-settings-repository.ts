@@ -37,7 +37,7 @@ export class HotkeySettingsRepository extends BaseRepository<HotkeySettings> {
       accelerator: entity.accelerator,
       description: entity.description,
       category: entity.category,
-      enabled: entity.enabled ? 1 : 0,
+      enabled: entity.enabled,
       ai_service_id: entity.aiServiceId,
       created_at: entity.createdAt.toISOString(),
       updated_at: entity.updatedAt.toISOString(),
@@ -47,11 +47,11 @@ export class HotkeySettingsRepository extends BaseRepository<HotkeySettings> {
   /**
    * 建立或更新熱鍵設定
    */
-  upsert(hotkeySettings: Partial<HotkeySettings> & { id: string }): HotkeySettings {
-    const existing = this.findById(hotkeySettings.id);
+  async upsert(hotkeySettings: Partial<HotkeySettings> & { id: string }): Promise<HotkeySettings> {
+    const existing = await this.findById(hotkeySettings.id);
 
     if (existing) {
-      return this.update(hotkeySettings.id, hotkeySettings);
+      return await this.update(hotkeySettings.id, hotkeySettings);
     } else {
       const now = new Date();
       const newSettings: HotkeySettings = {
@@ -66,60 +66,60 @@ export class HotkeySettingsRepository extends BaseRepository<HotkeySettings> {
         updatedAt: now,
       };
 
-      return this.create(newSettings);
+      return await this.create(newSettings);
     }
   }
 
   /**
    * 根據分類查詢熱鍵設定
    */
-  findByCategory(category: string): HotkeySettings[] {
-    const query = `SELECT * FROM ${this.tableName} WHERE category = ? ORDER BY name`;
-    const rows = this.db.prepare(query).all(category);
-    return rows.map((row) => this.rowToEntity(row));
+  async findByCategory(category: string): Promise<HotkeySettings[]> {
+    const sql = `SELECT * FROM ${this.tableName} WHERE category = $1 ORDER BY name`;
+    const result = await this.client.query(sql, [category]);
+    return result.rows.map((row) => this.rowToEntity(row));
   }
 
   /**
    * 查詢所有啟用的熱鍵設定
    */
-  findEnabled(): HotkeySettings[] {
-    const query = `SELECT * FROM ${this.tableName} WHERE enabled = 1 ORDER BY category, name`;
-    const rows = this.db.prepare(query).all();
-    return rows.map((row) => this.rowToEntity(row));
+  async findEnabled(): Promise<HotkeySettings[]> {
+    const sql = `SELECT * FROM ${this.tableName} WHERE enabled = true ORDER BY category, name`;
+    const result = await this.client.query(sql);
+    return result.rows.map((row) => this.rowToEntity(row));
   }
 
   /**
    * 根據 AI 服務 ID 查詢熱鍵設定
    */
-  findByAIServiceId(aiServiceId: string): HotkeySettings | null {
-    const query = `SELECT * FROM ${this.tableName} WHERE ai_service_id = ?`;
-    const row = this.db.prepare(query).get(aiServiceId);
-    return row ? this.rowToEntity(row) : null;
+  async findByAIServiceId(aiServiceId: string): Promise<HotkeySettings | null> {
+    const sql = `SELECT * FROM ${this.tableName} WHERE ai_service_id = $1`;
+    const result = await this.client.query(sql, [aiServiceId]);
+    return result.rows[0] ? this.rowToEntity(result.rows[0]) : null;
   }
 
   /**
    * 根據熱鍵組合查詢
    */
-  findByAccelerator(accelerator: string): HotkeySettings | null {
-    const query = `SELECT * FROM ${this.tableName} WHERE accelerator = ?`;
-    const row = this.db.prepare(query).get(accelerator);
-    return row ? this.rowToEntity(row) : null;
+  async findByAccelerator(accelerator: string): Promise<HotkeySettings | null> {
+    const sql = `SELECT * FROM ${this.tableName} WHERE accelerator = $1`;
+    const result = await this.client.query(sql, [accelerator]);
+    return result.rows[0] ? this.rowToEntity(result.rows[0]) : null;
   }
 
   /**
    * 切換熱鍵啟用狀態
    */
-  toggleEnabled(id: string): boolean {
-    const setting = this.findById(id);
+  async toggleEnabled(id: string): Promise<boolean> {
+    const setting = await this.findById(id);
 
     if (!setting) {
       return false;
     }
 
     const newEnabled = !setting.enabled;
-    const query = `UPDATE ${this.tableName} SET enabled = ?, updated_at = ? WHERE id = ?`;
+    const sql = `UPDATE ${this.tableName} SET enabled = $1, updated_at = $2 WHERE id = $3`;
 
-    this.db.prepare(query).run(newEnabled ? 1 : 0, new Date().toISOString(), id);
+    await this.client.query(sql, [newEnabled, new Date().toISOString(), id]);
 
     return true;
   }
@@ -127,18 +127,18 @@ export class HotkeySettingsRepository extends BaseRepository<HotkeySettings> {
   /**
    * 更新熱鍵組合
    */
-  updateAccelerator(id: string, accelerator: string): boolean {
+  async updateAccelerator(id: string, accelerator: string): Promise<boolean> {
     // 檢查新的熱鍵組合是否已被使用
-    const existing = this.findByAccelerator(accelerator);
+    const existing = await this.findByAccelerator(accelerator);
 
     if (existing && existing.id !== id) {
       console.warn(`Accelerator ${accelerator} is already used by ${existing.id}`);
       return false;
     }
 
-    const query = `UPDATE ${this.tableName} SET accelerator = ?, updated_at = ? WHERE id = ?`;
+    const sql = `UPDATE ${this.tableName} SET accelerator = $1, updated_at = $2 WHERE id = $3`;
 
-    this.db.prepare(query).run(accelerator, new Date().toISOString(), id);
+    await this.client.query(sql, [accelerator, new Date().toISOString(), id]);
 
     return true;
   }
@@ -146,28 +146,28 @@ export class HotkeySettingsRepository extends BaseRepository<HotkeySettings> {
   /**
    * 檢查熱鍵組合是否已存在
    */
-  isAcceleratorUsed(accelerator: string, excludeId?: string): boolean {
-    let query = `SELECT COUNT(*) as count FROM ${this.tableName} WHERE accelerator = ?`;
+  async isAcceleratorUsed(accelerator: string, excludeId?: string): Promise<boolean> {
+    let sql = `SELECT COUNT(*) as count FROM ${this.tableName} WHERE accelerator = $1`;
     const params: any[] = [accelerator];
 
     if (excludeId) {
-      query += ' AND id != ?';
+      sql += ' AND id != $2';
       params.push(excludeId);
     }
 
-    const result = this.db.prepare(query).get(...params) as { count: number };
-    return result.count > 0;
+    const result = await this.client.query(sql, params);
+    return result.rows[0]?.count > 0;
   }
 
   /**
    * 取得所有熱鍵組合（用於衝突檢測）
    */
-  getAllAccelerators(): Map<string, string> {
-    const query = `SELECT id, accelerator FROM ${this.tableName} WHERE enabled = 1`;
-    const rows = this.db.prepare(query).all();
+  async getAllAccelerators(): Promise<Map<string, string>> {
+    const sql = `SELECT id, accelerator FROM ${this.tableName} WHERE enabled = true`;
+    const result = await this.client.query(sql);
 
     const acceleratorMap = new Map<string, string>();
-    rows.forEach((row: any) => {
+    result.rows.forEach((row: any) => {
       acceleratorMap.set(row.accelerator, row.id);
     });
 
@@ -177,51 +177,45 @@ export class HotkeySettingsRepository extends BaseRepository<HotkeySettings> {
   /**
    * 批次更新熱鍵設定
    */
-  batchUpdate(settings: Array<Partial<HotkeySettings> & { id: string }>): void {
-    const updateStmt = this.db.prepare(
-      `UPDATE ${this.tableName}
-       SET accelerator = ?, enabled = ?, updated_at = ?
-       WHERE id = ?`
-    );
+  async batchUpdate(settings: Array<Partial<HotkeySettings> & { id: string }>): Promise<void> {
+    const sql = `UPDATE ${this.tableName}
+       SET accelerator = $1, enabled = $2, updated_at = $3
+       WHERE id = $4`;
 
     const now = new Date().toISOString();
 
-    this.db.transaction(() => {
-      settings.forEach((setting) => {
-        updateStmt.run(setting.accelerator, setting.enabled ? 1 : 0, now, setting.id);
-      });
-    })();
+    for (const setting of settings) {
+      await this.client.query(sql, [setting.accelerator, setting.enabled, now, setting.id]);
+    }
   }
 
   /**
    * 重置為預設熱鍵設定
    */
-  resetToDefaults(defaultSettings: HotkeySettings[]): void {
-    this.db.transaction(() => {
-      // 清空現有設定
-      this.db.prepare(`DELETE FROM ${this.tableName}`).run();
+  async resetToDefaults(defaultSettings: HotkeySettings[]): Promise<void> {
+    // 清空現有設定
+    await this.client.query(`DELETE FROM ${this.tableName}`);
 
-      // 插入預設設定
-      defaultSettings.forEach((setting) => {
-        this.create(setting);
-      });
-    })();
+    // 插入預設設定
+    for (const setting of defaultSettings) {
+      await this.create(setting);
+    }
   }
 
   /**
    * 取得分類統計
    */
-  getCategoryStats(): Record<string, number> {
-    const query = `
+  async getCategoryStats(): Promise<Record<string, number>> {
+    const sql = `
       SELECT category, COUNT(*) as count
       FROM ${this.tableName}
       GROUP BY category
     `;
 
-    const rows = this.db.prepare(query).all();
+    const result = await this.client.query(sql);
 
     const stats: Record<string, number> = {};
-    rows.forEach((row: any) => {
+    result.rows.forEach((row: any) => {
       stats[row.category] = row.count;
     });
 
