@@ -1,7 +1,9 @@
-import { ErrorCode, ErrorSeverity, ErrorCategory } from '../constants/error-codes';
+import { ErrorSeverity, ErrorCategory } from '../constants/error-codes';
+import type { ErrorCode } from '../constants/error-codes';
 
 // Re-export types for convenience
-export { ErrorCode, ErrorSeverity, ErrorCategory };
+export { ErrorSeverity, ErrorCategory };
+export type { ErrorCode };
 
 /**
  * 應用程式基礎錯誤類別
