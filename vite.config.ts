@@ -19,7 +19,7 @@ export default defineConfig({
             minify: process.env.NODE_ENV !== 'development',
             outDir: 'dist/main',
             rollupOptions: {
-              external: ['electron'],
+              external: ['electron', 'better-sqlite3'],
             },
           },
         },
