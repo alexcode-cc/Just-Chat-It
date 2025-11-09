@@ -104,6 +104,35 @@ export const CREATE_TABLES_SQL = {
       FOREIGN KEY (ai_service_id) REFERENCES ai_services(id)
     )
   `,
+
+  // 比較會話表
+  comparisonSessions: `
+    CREATE TABLE IF NOT EXISTS comparison_sessions (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      prompt_content TEXT NOT NULL,
+      ai_service_ids TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `,
+
+  // 比較結果表
+  comparisonResults: `
+    CREATE TABLE IF NOT EXISTS comparison_results (
+      id TEXT PRIMARY KEY,
+      comparison_session_id TEXT NOT NULL,
+      ai_service_id TEXT NOT NULL,
+      response TEXT NOT NULL,
+      response_time INTEGER,
+      status TEXT DEFAULT 'pending',
+      error_message TEXT,
+      timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+      metadata TEXT,
+      FOREIGN KEY (comparison_session_id) REFERENCES comparison_sessions(id),
+      FOREIGN KEY (ai_service_id) REFERENCES ai_services(id)
+    )
+  `,
 };
 
 // 建立索引的SQL
@@ -156,5 +185,20 @@ export const CREATE_INDEXES_SQL = {
   hotkeySettingsByAI: `
     CREATE INDEX IF NOT EXISTS idx_hotkey_settings_ai_service_id
     ON hotkey_settings(ai_service_id)
+  `,
+
+  comparisonResultsBySession: `
+    CREATE INDEX IF NOT EXISTS idx_comparison_results_session_id
+    ON comparison_results(comparison_session_id)
+  `,
+
+  comparisonResultsByAI: `
+    CREATE INDEX IF NOT EXISTS idx_comparison_results_ai_service_id
+    ON comparison_results(ai_service_id)
+  `,
+
+  comparisonResultsByStatus: `
+    CREATE INDEX IF NOT EXISTS idx_comparison_results_status
+    ON comparison_results(status)
   `,
 };

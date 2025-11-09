@@ -108,3 +108,30 @@ export interface HotkeySettings {
   createdAt: Date;
   updatedAt: Date;
 }
+
+/**
+ * 比較會話介面
+ */
+export interface ComparisonSession {
+  id: string;
+  title: string;
+  promptContent: string; // 使用的提示詞
+  aiServiceIds: string[]; // 參與比較的 AI 服務 ID 列表
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * 比較結果介面
+ */
+export interface ComparisonResult {
+  id: string;
+  comparisonSessionId: string; // 關聯的比較會話 ID
+  aiServiceId: string; // AI 服務 ID
+  response: string; // AI 的回應內容
+  responseTime?: number; // 回應時間（毫秒）
+  status: 'pending' | 'loading' | 'success' | 'error'; // 狀態
+  errorMessage?: string; // 錯誤訊息（如果有）
+  timestamp: Date;
+  metadata?: Record<string, any>; // 其他元資料
+}
