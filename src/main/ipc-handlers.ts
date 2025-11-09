@@ -10,6 +10,7 @@ import {
 } from './database/repositories';
 import { WindowManager } from './window-manager';
 import { ClipboardManager, NotificationManager } from './system-integration';
+import { contentCaptureManager } from './services/content-capture-manager';
 
 // 初始化 Repository 實例
 let aiServiceRepo: AIServiceRepository;
@@ -587,6 +588,257 @@ export function setupIpcHandlers(
       return { success: false, error: 'NotificationManager not initialized' };
     } catch (error) {
       console.error('Error triggering quota check:', error);
+      throw error;
+    }
+  });
+
+  // ===== 內容擷取相關 =====
+
+  /**
+   * 開始內容擷取
+   */
+  ipcMain.handle(
+    'content:start-capture',
+    async (
+      event,
+      data: {
+        windowId: string;
+        aiServiceId: string;
+        sessionId: string;
+        intervalMs?: number;
+      }
+    ) => {
+      try {
+        contentCaptureManager.startCapture(
+          data.windowId,
+          data.aiServiceId,
+          data.sessionId,
+          data.intervalMs
+        );
+        return { success: true };
+      } catch (error) {
+        console.error('Error starting content capture:', error);
+        throw error;
+      }
+    }
+  );
+
+  /**
+   * 停止內容擷取
+   */
+  ipcMain.handle('content:stop-capture', async (event, windowId: string) => {
+    try {
+      contentCaptureManager.stopCapture(windowId);
+      return { success: true };
+    } catch (error) {
+      console.error('Error stopping content capture:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 手動擷取快照
+   */
+  ipcMain.handle(
+    'content:capture-snapshot',
+    async (
+      event,
+      data: {
+        windowId: string;
+        aiServiceId: string;
+        sessionId: string;
+      }
+    ) => {
+      try {
+        const messages = await contentCaptureManager.captureSingleSnapshot(
+          data.windowId,
+          data.aiServiceId,
+          data.sessionId
+        );
+        return { success: true, messages };
+      } catch (error) {
+        console.error('Error capturing snapshot:', error);
+        throw error;
+      }
+    }
+  );
+
+  /**
+   * 匯出會話歷史（Markdown 格式）
+   */
+  ipcMain.handle('history:export-markdown', async (event, sessionId: string) => {
+    try {
+      const session = chatSessionRepo.findById(sessionId);
+      if (!session) {
+        throw new Error('Session not found');
+      }
+
+      const messages = chatMessageRepo.findBySession(sessionId);
+      const aiService = aiServiceRepo.findById(session.aiServiceId);
+
+      // 建立 Markdown 內容
+      let markdown = `# ${session.title}\n\n`;
+      markdown += `**AI 服務**: ${aiService?.displayName || session.aiServiceId}\n`;
+      markdown += `**建立時間**: ${session.createdAt.toLocaleString('zh-TW')}\n`;
+      markdown += `**最後更新**: ${session.updatedAt.toLocaleString('zh-TW')}\n`;
+      markdown += `**訊息數量**: ${messages.length}\n\n`;
+      markdown += `---\n\n`;
+
+      messages.forEach((msg) => {
+        const role = msg.isUser ? '👤 使用者' : '🤖 助手';
+        const time = new Date(msg.timestamp).toLocaleString('zh-TW');
+
+        markdown += `## ${role} (${time})\n\n`;
+        markdown += `${msg.content}\n\n`;
+        markdown += `---\n\n`;
+      });
+
+      return { success: true, markdown, filename: `${session.title}-${Date.now()}.md` };
+    } catch (error) {
+      console.error('Error exporting to markdown:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 匯出會話歷史（JSON 格式）
+   */
+  ipcMain.handle('history:export-json', async (event, sessionId: string) => {
+    try {
+      const session = chatSessionRepo.findById(sessionId);
+      if (!session) {
+        throw new Error('Session not found');
+      }
+
+      const messages = chatMessageRepo.findBySession(sessionId);
+      const aiService = aiServiceRepo.findById(session.aiServiceId);
+
+      const exportData = {
+        session: {
+          id: session.id,
+          title: session.title,
+          aiService: aiService?.displayName || session.aiServiceId,
+          aiServiceId: session.aiServiceId,
+          createdAt: session.createdAt,
+          updatedAt: session.updatedAt,
+        },
+        messages: messages.map((msg) => ({
+          id: msg.id,
+          content: msg.content,
+          timestamp: msg.timestamp,
+          isUser: msg.isUser,
+          role: msg.isUser ? 'user' : 'assistant',
+          metadata: msg.metadata,
+        })),
+        exportedAt: new Date(),
+      };
+
+      const json = JSON.stringify(exportData, null, 2);
+      return { success: true, json, filename: `${session.title}-${Date.now()}.json` };
+    } catch (error) {
+      console.error('Error exporting to JSON:', error);
+      throw error;
+    }
+  });
+
+  /**
+   * 搜尋歷史訊息（進階搜尋）
+   */
+  ipcMain.handle(
+    'history:search',
+    async (
+      event,
+      query: {
+        searchText?: string;
+        aiServiceId?: string;
+        sessionId?: string;
+        dateFrom?: string;
+        dateTo?: string;
+        isUser?: boolean;
+      }
+    ) => {
+      try {
+        let messages = query.sessionId
+          ? chatMessageRepo.findBySession(query.sessionId)
+          : chatMessageRepo.findAll();
+
+        // 應用篩選條件
+        if (query.searchText) {
+          const searchLower = query.searchText.toLowerCase();
+          messages = messages.filter((msg) => msg.content.toLowerCase().includes(searchLower));
+        }
+
+        if (query.aiServiceId) {
+          const sessions = chatSessionRepo.findByAIService(query.aiServiceId);
+          const sessionIds = new Set(sessions.map((s) => s.id));
+          messages = messages.filter((msg) => sessionIds.has(msg.sessionId));
+        }
+
+        if (query.dateFrom) {
+          const fromDate = new Date(query.dateFrom);
+          messages = messages.filter((msg) => new Date(msg.timestamp) >= fromDate);
+        }
+
+        if (query.dateTo) {
+          const toDate = new Date(query.dateTo);
+          messages = messages.filter((msg) => new Date(msg.timestamp) <= toDate);
+        }
+
+        if (query.isUser !== undefined) {
+          messages = messages.filter((msg) => msg.isUser === query.isUser);
+        }
+
+        // 限制結果數量
+        const limitedMessages = messages.slice(0, 200);
+
+        return { success: true, messages: limitedMessages, total: messages.length };
+      } catch (error) {
+        console.error('Error searching history:', error);
+        throw error;
+      }
+    }
+  );
+
+  /**
+   * 取得會話統計
+   */
+  ipcMain.handle('history:get-stats', async (event, sessionId?: string) => {
+    try {
+      let sessions: any[];
+      let totalMessages = 0;
+
+      if (sessionId) {
+        const session = chatSessionRepo.findById(sessionId);
+        sessions = session ? [session] : [];
+        totalMessages = chatMessageRepo.countBySession(sessionId);
+      } else {
+        sessions = chatSessionRepo.findAll();
+        const allMessages = chatMessageRepo.findAll();
+        totalMessages = allMessages.length;
+      }
+
+      const stats = {
+        totalSessions: sessions.length,
+        totalMessages,
+        activeSessions: sessions.filter((s: any) => s.isActive).length,
+        byAIService: {} as Record<string, { sessions: number; messages: number }>,
+      };
+
+      // 按 AI 服務統計
+      for (const session of sessions) {
+        const aiServiceId = (session as any).aiServiceId;
+        if (!stats.byAIService[aiServiceId]) {
+          stats.byAIService[aiServiceId] = { sessions: 0, messages: 0 };
+        }
+        stats.byAIService[aiServiceId].sessions++;
+        stats.byAIService[aiServiceId].messages += chatMessageRepo.countBySession(
+          (session as any).id
+        );
+      }
+
+      return { success: true, stats };
+    } catch (error) {
+      console.error('Error getting history stats:', error);
       throw error;
     }
   });
