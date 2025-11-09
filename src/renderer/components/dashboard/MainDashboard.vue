@@ -129,6 +129,18 @@
                 <v-col cols="12" sm="6" md="3">
                   <v-card
                     class="function-card liquid-glass-interactive"
+                    @click="$router.push('/history')"
+                  >
+                    <v-card-text class="text-center">
+                      <v-icon size="48" color="cyan" class="mb-2">mdi-history</v-icon>
+                      <h4 class="text-h6 mb-1">對話歷史</h4>
+                      <p class="text-caption text-grey">查看離線對話記錄</p>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+                <v-col cols="12" sm="6" md="3">
+                  <v-card
+                    class="function-card liquid-glass-interactive"
                     @click="$router.push('/settings')"
                   >
                     <v-card-text class="text-center">

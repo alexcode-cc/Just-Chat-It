@@ -31,6 +31,11 @@ const routes: RouteRecordRaw[] = [
     name: 'Quota',
     component: () => import('@/components/quota/QuotaManager.vue'),
   },
+  {
+    path: '/history',
+    name: 'History',
+    component: () => import('@/components/history/HistoryBrowser.vue'),
+  },
 ];
 
 export default routes;

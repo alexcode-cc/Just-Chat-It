@@ -73,6 +73,31 @@ const electronAPI = {
   getDepletedQuotas: () => ipcRenderer.invoke('quota:get-depleted'),
   triggerQuotaCheck: () => ipcRenderer.invoke('quota:trigger-check'),
 
+  // 內容擷取管理
+  startContentCapture: (data: {
+    windowId: string;
+    aiServiceId: string;
+    sessionId: string;
+    intervalMs?: number;
+  }) => ipcRenderer.invoke('content:start-capture', data),
+  stopContentCapture: (windowId: string) => ipcRenderer.invoke('content:stop-capture', windowId),
+  captureSnapshot: (data: { windowId: string; aiServiceId: string; sessionId: string }) =>
+    ipcRenderer.invoke('content:capture-snapshot', data),
+
+  // 歷史記錄管理
+  exportHistoryMarkdown: (sessionId: string) =>
+    ipcRenderer.invoke('history:export-markdown', sessionId),
+  exportHistoryJSON: (sessionId: string) => ipcRenderer.invoke('history:export-json', sessionId),
+  searchHistory: (query: {
+    searchText?: string;
+    aiServiceId?: string;
+    sessionId?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    isUser?: boolean;
+  }) => ipcRenderer.invoke('history:search', query),
+  getHistoryStats: (sessionId?: string) => ipcRenderer.invoke('history:get-stats', sessionId),
+
   // IPC 事件監聽
   onNavigateTo: (callback: (route: string) => void) => {
     ipcRenderer.on('navigate-to', (event, route) => callback(route));
