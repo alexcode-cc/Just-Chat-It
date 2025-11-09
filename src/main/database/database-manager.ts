@@ -1,4 +1,5 @@
 import { PGlite } from '@electric-sql/pglite';
+import { NodeFS } from '@electric-sql/pglite/nodefs';
 import path from 'path';
 import { app } from 'electron';
 import { CREATE_TABLES_SQL, CREATE_INDEXES_SQL } from './schema';
@@ -40,8 +41,10 @@ export class DatabaseManager {
     }
 
     try {
-      // 創建 PGlite 實例
-      this.client = new PGlite(this.dbPath);
+      // 創建 PGlite 實例，使用 NodeFS 檔案系統
+      this.client = new PGlite({
+        fs: new NodeFS(this.dbPath),
+      });
 
       // 等待客戶端就緒
       await this.client.waitReady;
