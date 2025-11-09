@@ -1,6 +1,7 @@
 import { PGlite } from '@electric-sql/pglite';
 import path from 'path';
 import { app } from 'electron';
+import { pathToFileURL } from 'url';
 import { CREATE_TABLES_SQL, CREATE_INDEXES_SQL } from './schema';
 import { DB_NAME } from '../../shared/constants/database';
 
@@ -17,7 +18,9 @@ export class DatabaseManager {
     // 取得使用者資料目錄
     const userDataPath = app.getPath('userData');
     // PGlite 使用目錄而非單一檔案
-    this.dbPath = path.join(userDataPath, 'database');
+    // 使用 file:// URL scheme 來避免 Windows 路徑問題
+    const dbDir = path.join(userDataPath, 'database');
+    this.dbPath = pathToFileURL(dbDir).href;
   }
 
   /**
