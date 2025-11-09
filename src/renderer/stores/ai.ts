@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia';
-import type { AIService, QuotaInfo } from '../../shared/types/database';
+import type { AIService, QuotaInfo, QuotaTracking } from '../../shared/types/database';
 
 interface AIStoreState {
   services: AIService[];
   quotaStatus: Map<string, QuotaInfo>;
+  quotaTrackings: Map<string, QuotaTracking>;
   loading: boolean;
   error: string | null;
 }
@@ -12,6 +13,7 @@ export const useAIStore = defineStore('ai', {
   state: (): AIStoreState => ({
     services: [],
     quotaStatus: new Map(),
+    quotaTrackings: new Map(),
     loading: false,
     error: null,
   }),
@@ -40,6 +42,38 @@ export const useAIStore = defineStore('ai', {
       return (serviceId: string): QuotaInfo | undefined => {
         return state.quotaStatus.get(serviceId);
       };
+    },
+
+    /**
+     * 取得服務的額度追蹤資訊
+     */
+    getQuotaTracking(state) {
+      return (serviceId: string): QuotaTracking | undefined => {
+        return state.quotaTrackings.get(serviceId);
+      };
+    },
+
+    /**
+     * 取得已用盡額度的服務
+     */
+    depletedServices(state): QuotaTracking[] {
+      return Array.from(state.quotaTrackings.values()).filter(
+        (quota) => quota.quotaStatus === 'depleted',
+      );
+    },
+
+    /**
+     * 取得即將重置的額度（24小時內）
+     */
+    upcomingResets(state): QuotaTracking[] {
+      const now = new Date();
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+      return Array.from(state.quotaTrackings.values()).filter((quota) => {
+        if (!quota.quotaResetTime) return false;
+        const resetTime = new Date(quota.quotaResetTime);
+        return resetTime > now && resetTime <= tomorrow;
+      });
     },
   },
 
@@ -142,6 +176,148 @@ export const useAIStore = defineStore('ai', {
             await this.updateQuotaStatus(service.id, true);
           }
         }
+      }
+    },
+
+    /**
+     * 載入所有額度追蹤資訊
+     */
+    async loadQuotaTrackings() {
+      try {
+        const quotas = (await window.electronAPI.getAllQuotas()) as QuotaTracking[];
+        this.quotaTrackings.clear();
+        quotas.forEach((quota) => {
+          this.quotaTrackings.set(quota.aiServiceId, quota);
+        });
+      } catch (error) {
+        console.error('Failed to load quota trackings:', error);
+        this.error = `載入額度追蹤資訊失敗: ${error}`;
+      }
+    },
+
+    /**
+     * 載入特定服務的額度追蹤資訊
+     */
+    async loadQuotaTracking(serviceId: string) {
+      try {
+        const quota = (await window.electronAPI.getQuotaByService(serviceId)) as
+          | QuotaTracking
+          | undefined;
+        if (quota) {
+          this.quotaTrackings.set(serviceId, quota);
+        }
+        return quota;
+      } catch (error) {
+        console.error(`Failed to load quota tracking for ${serviceId}:`, error);
+        throw error;
+      }
+    },
+
+    /**
+     * 標記額度為已用盡
+     */
+    async markQuotaDepleted(serviceId: string, resetTime?: Date, notes?: string) {
+      try {
+        const quota = (await window.electronAPI.markQuotaDepleted({
+          aiServiceId: serviceId,
+          resetTime: resetTime?.toISOString(),
+          notes,
+        })) as QuotaTracking;
+
+        this.quotaTrackings.set(serviceId, quota);
+
+        // 同時更新服務狀態
+        await this.updateQuotaStatus(serviceId, false, resetTime);
+
+        return quota;
+      } catch (error) {
+        console.error(`Failed to mark quota as depleted for ${serviceId}:`, error);
+        this.error = `標記額度用盡失敗: ${error}`;
+        throw error;
+      }
+    },
+
+    /**
+     * 標記額度為可用
+     */
+    async markQuotaAvailable(serviceId: string, resetTime?: Date) {
+      try {
+        const quota = (await window.electronAPI.markQuotaAvailable({
+          aiServiceId: serviceId,
+          resetTime: resetTime?.toISOString(),
+        })) as QuotaTracking;
+
+        this.quotaTrackings.set(serviceId, quota);
+
+        // 同時更新服務狀態
+        await this.updateQuotaStatus(serviceId, true, resetTime);
+
+        return quota;
+      } catch (error) {
+        console.error(`Failed to mark quota as available for ${serviceId}:`, error);
+        this.error = `標記額度可用失敗: ${error}`;
+        throw error;
+      }
+    },
+
+    /**
+     * 更新額度重置時間
+     */
+    async updateQuotaResetTime(serviceId: string, resetTime: Date) {
+      try {
+        const quota = (await window.electronAPI.updateQuotaResetTime({
+          aiServiceId: serviceId,
+          resetTime: resetTime.toISOString(),
+        })) as QuotaTracking;
+
+        if (quota) {
+          this.quotaTrackings.set(serviceId, quota);
+        }
+
+        return quota;
+      } catch (error) {
+        console.error(`Failed to update quota reset time for ${serviceId}:`, error);
+        this.error = `更新額度重置時間失敗: ${error}`;
+        throw error;
+      }
+    },
+
+    /**
+     * 更新額度通知設定
+     */
+    async updateQuotaNotifySettings(
+      serviceId: string,
+      notifyEnabled: boolean,
+      notifyBeforeMinutes?: number,
+    ) {
+      try {
+        const quota = (await window.electronAPI.updateQuotaNotifySettings({
+          aiServiceId: serviceId,
+          notifyEnabled,
+          notifyBeforeMinutes,
+        })) as QuotaTracking;
+
+        this.quotaTrackings.set(serviceId, quota);
+
+        return quota;
+      } catch (error) {
+        console.error(`Failed to update quota notify settings for ${serviceId}:`, error);
+        this.error = `更新通知設定失敗: ${error}`;
+        throw error;
+      }
+    },
+
+    /**
+     * 觸發額度檢查（立即檢查並發送通知）
+     */
+    async triggerQuotaCheck() {
+      try {
+        await window.electronAPI.triggerQuotaCheck();
+        // 重新載入額度資訊
+        await this.loadQuotaTrackings();
+      } catch (error) {
+        console.error('Failed to trigger quota check:', error);
+        this.error = `觸發額度檢查失敗: ${error}`;
       }
     },
   },

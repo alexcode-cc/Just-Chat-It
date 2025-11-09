@@ -55,6 +55,24 @@ const electronAPI = {
   showNotification: (options: { title: string; body: string; icon?: string }) =>
     ipcRenderer.invoke('notification:show', options),
 
+  // 額度追蹤管理
+  getQuotaByService: (aiServiceId: string) =>
+    ipcRenderer.invoke('quota:get-by-service', aiServiceId),
+  getAllQuotas: () => ipcRenderer.invoke('quota:get-all'),
+  markQuotaDepleted: (data: { aiServiceId: string; resetTime?: string; notes?: string }) =>
+    ipcRenderer.invoke('quota:mark-depleted', data),
+  markQuotaAvailable: (data: { aiServiceId: string; resetTime?: string }) =>
+    ipcRenderer.invoke('quota:mark-available', data),
+  updateQuotaResetTime: (data: { aiServiceId: string; resetTime: string }) =>
+    ipcRenderer.invoke('quota:update-reset-time', data),
+  updateQuotaNotifySettings: (data: {
+    aiServiceId: string;
+    notifyEnabled: boolean;
+    notifyBeforeMinutes?: number;
+  }) => ipcRenderer.invoke('quota:update-notify-settings', data),
+  getDepletedQuotas: () => ipcRenderer.invoke('quota:get-depleted'),
+  triggerQuotaCheck: () => ipcRenderer.invoke('quota:trigger-check'),
+
   // IPC 事件監聽
   onNavigateTo: (callback: (route: string) => void) => {
     ipcRenderer.on('navigate-to', (event, route) => callback(route));
