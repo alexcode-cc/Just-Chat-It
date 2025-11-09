@@ -117,21 +117,24 @@
                 <v-col cols="12" sm="6" md="3">
                   <v-card
                     class="function-card liquid-glass-interactive"
+                    @click="$router.push('/quota')"
+                  >
+                    <v-card-text class="text-center">
+                      <v-icon size="48" color="warning" class="mb-2">mdi-gauge</v-icon>
+                      <h4 class="text-h6 mb-1">額度追蹤</h4>
+                      <p class="text-caption text-grey">管理 AI 使用額度</p>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+                <v-col cols="12" sm="6" md="3">
+                  <v-card
+                    class="function-card liquid-glass-interactive"
                     @click="$router.push('/settings')"
                   >
                     <v-card-text class="text-center">
                       <v-icon size="48" color="blue" class="mb-2">mdi-cog</v-icon>
                       <h4 class="text-h6 mb-1">系統設定</h4>
                       <p class="text-caption text-grey">調整應用程式設定</p>
-                    </v-card-text>
-                  </v-card>
-                </v-col>
-                <v-col cols="12" sm="6" md="3">
-                  <v-card class="function-card liquid-glass-interactive">
-                    <v-card-text class="text-center">
-                      <v-icon size="48" color="green" class="mb-2">mdi-information</v-icon>
-                      <h4 class="text-h6 mb-1">關於</h4>
-                      <p class="text-caption text-grey">應用程式資訊</p>
                     </v-card-text>
                   </v-card>
                 </v-col>

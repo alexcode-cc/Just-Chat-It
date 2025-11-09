@@ -26,6 +26,11 @@ const routes: RouteRecordRaw[] = [
     name: 'Prompts',
     component: () => import('@/components/prompts/PromptLibrary.vue'),
   },
+  {
+    path: '/quota',
+    name: 'Quota',
+    component: () => import('@/components/quota/QuotaManager.vue'),
+  },
 ];
 
 export default routes;
