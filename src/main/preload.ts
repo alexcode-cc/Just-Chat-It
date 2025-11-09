@@ -110,6 +110,26 @@ const electronAPI = {
   clearErrorStats: () => ipcRenderer.invoke('error:clear-stats'),
   setLogLevel: (level: string) => ipcRenderer.invoke('log:set-level', level),
 
+  // 效能監控
+  startPerformanceMonitoring: () => ipcRenderer.invoke('performance:start-monitoring'),
+  stopPerformanceMonitoring: () => ipcRenderer.invoke('performance:stop-monitoring'),
+  getPerformanceReport: () => ipcRenderer.invoke('performance:get-report'),
+  getPerformanceWarnings: () => ipcRenderer.invoke('performance:get-warnings'),
+  clearPerformanceWarnings: () => ipcRenderer.invoke('performance:clear-warnings'),
+  getPerformanceConfig: () => ipcRenderer.invoke('performance:get-config'),
+  updatePerformanceConfig: (config: any) =>
+    ipcRenderer.invoke('performance:update-config', config),
+  optimizeMemory: () => ipcRenderer.invoke('performance:optimize-memory'),
+  analyzePerformance: () => ipcRenderer.invoke('performance:analyze'),
+  autoOptimizePerformance: () => ipcRenderer.invoke('performance:auto-optimize'),
+  getPerformanceStats: () => ipcRenderer.invoke('performance:get-stats'),
+
+  // 自動更新
+  checkForUpdates: () => ipcRenderer.invoke('updater:check-for-updates'),
+  downloadUpdate: () => ipcRenderer.invoke('updater:download-update'),
+  quitAndInstall: () => ipcRenderer.invoke('updater:quit-and-install'),
+  getCurrentVersion: () => ipcRenderer.invoke('updater:get-current-version'),
+
   // IPC 事件監聽
   onNavigateTo: (callback: (route: string) => void) => {
     ipcRenderer.on('navigate-to', (event, route) => callback(route));
@@ -119,6 +139,27 @@ const electronAPI = {
   },
   onClipboardContent: (callback: (content: string) => void) => {
     ipcRenderer.on('clipboard-content', (event, content) => callback(content));
+  },
+  onPerformanceWarning: (callback: (warnings: any[]) => void) => {
+    ipcRenderer.on('performance:warning', (event, warnings) => callback(warnings));
+  },
+  onUpdateChecking: (callback: () => void) => {
+    ipcRenderer.on('update:checking', () => callback());
+  },
+  onUpdateAvailable: (callback: (info: any) => void) => {
+    ipcRenderer.on('update:available', (event, info) => callback(info));
+  },
+  onUpdateNotAvailable: (callback: (info: any) => void) => {
+    ipcRenderer.on('update:not-available', (event, info) => callback(info));
+  },
+  onUpdateDownloadProgress: (callback: (progress: any) => void) => {
+    ipcRenderer.on('update:download-progress', (event, progress) => callback(progress));
+  },
+  onUpdateDownloaded: (callback: (info: any) => void) => {
+    ipcRenderer.on('update:downloaded', (event, info) => callback(info));
+  },
+  onUpdateError: (callback: (error: any) => void) => {
+    ipcRenderer.on('update:error', (event, error) => callback(error));
   },
 };
 
