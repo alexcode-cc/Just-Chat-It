@@ -1,3 +1,10 @@
+// Polyfill for PGlite in Node.js environment
+// PGlite expects 'self' to be defined, which is a browser global variable
+// In Node.js, we need to define it as globalThis
+if (typeof self === 'undefined') {
+  (global as any).self = globalThis;
+}
+
 import { app, BrowserWindow } from 'electron';
 import { WindowManager } from './window-manager';
 import { setupIpcHandlers } from './ipc-handlers';
