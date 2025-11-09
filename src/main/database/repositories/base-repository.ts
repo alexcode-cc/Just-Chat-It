@@ -5,12 +5,17 @@ import { DatabaseManager } from '../database-manager';
  * Repository 基礎類別（PGlite 異步版本）
  */
 export abstract class BaseRepository<T> {
-  protected client: PGlite;
   protected tableName: string;
 
   constructor(tableName: string) {
     this.tableName = tableName;
-    this.client = DatabaseManager.getInstance().getClient();
+  }
+
+  /**
+   * 獲取資料庫 client（延遲載入）
+   */
+  protected get client(): PGlite {
+    return DatabaseManager.getInstance().getClient();
   }
 
   /**
