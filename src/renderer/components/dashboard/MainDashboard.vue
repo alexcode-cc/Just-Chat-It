@@ -80,6 +80,67 @@
         </v-col>
       </v-row>
 
+      <!-- 快速功能 -->
+      <v-row class="mb-4">
+        <v-col cols="12">
+          <v-card class="liquid-glass-card">
+            <v-card-title class="d-flex align-center">
+              <v-icon class="mr-2" color="info">mdi-lightning-bolt</v-icon>
+              快速功能
+            </v-card-title>
+            <v-card-text>
+              <v-row>
+                <v-col cols="12" sm="6" md="3">
+                  <v-card
+                    class="function-card liquid-glass-interactive"
+                    @click="$router.push('/prompts')"
+                  >
+                    <v-card-text class="text-center">
+                      <v-icon size="48" color="purple" class="mb-2">mdi-text-box-multiple</v-icon>
+                      <h4 class="text-h6 mb-1">提示詞庫</h4>
+                      <p class="text-caption text-grey">管理和使用提示詞</p>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+                <v-col cols="12" sm="6" md="3">
+                  <v-card
+                    class="function-card liquid-glass-interactive"
+                    @click="$router.push('/compare')"
+                  >
+                    <v-card-text class="text-center">
+                      <v-icon size="48" color="orange" class="mb-2">mdi-compare</v-icon>
+                      <h4 class="text-h6 mb-1">AI 比較</h4>
+                      <p class="text-caption text-grey">同時查詢多個 AI</p>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+                <v-col cols="12" sm="6" md="3">
+                  <v-card
+                    class="function-card liquid-glass-interactive"
+                    @click="$router.push('/settings')"
+                  >
+                    <v-card-text class="text-center">
+                      <v-icon size="48" color="blue" class="mb-2">mdi-cog</v-icon>
+                      <h4 class="text-h6 mb-1">系統設定</h4>
+                      <p class="text-caption text-grey">調整應用程式設定</p>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+                <v-col cols="12" sm="6" md="3">
+                  <v-card class="function-card liquid-glass-interactive">
+                    <v-card-text class="text-center">
+                      <v-icon size="48" color="green" class="mb-2">mdi-information</v-icon>
+                      <h4 class="text-h6 mb-1">關於</h4>
+                      <p class="text-caption text-grey">應用程式資訊</p>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+
       <v-row>
         <v-col cols="12" md="6">
           <v-card ref="statusCard" class="liquid-glass-card mb-4">
@@ -340,6 +401,19 @@ onUnmounted(() => {
   }
 }
 
+.function-card {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  height: 100%;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(139, 92, 246, 0.3);
+  }
+}
+
 // 深色主題樣式
 :global(.dark-theme) {
   .liquid-glass-bg {
@@ -360,6 +434,11 @@ onUnmounted(() => {
   }
 
   .service-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .function-card {
     background: rgba(255, 255, 255, 0.05);
     border-color: rgba(255, 255, 255, 0.1);
   }

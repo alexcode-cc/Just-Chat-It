@@ -21,6 +21,11 @@ const routes: RouteRecordRaw[] = [
     name: 'Settings',
     component: () => import('@/components/settings/SettingsPanel.vue'),
   },
+  {
+    path: '/prompts',
+    name: 'Prompts',
+    component: () => import('@/components/prompts/PromptLibrary.vue'),
+  },
 ];
 
 export default routes;
