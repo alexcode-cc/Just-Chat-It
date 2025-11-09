@@ -1,5 +1,4 @@
 import { PGlite } from '@electric-sql/pglite';
-import { NodeFS } from '@electric-sql/pglite/nodefs';
 import path from 'path';
 import { app } from 'electron';
 import { CREATE_TABLES_SQL, CREATE_INDEXES_SQL } from './schema';
@@ -7,6 +6,11 @@ import { DB_NAME } from '../../shared/constants/database';
 
 /**
  * PGlite 資料庫管理類別
+ *
+ * 重構說明：
+ * - 移除 NodeFS 包裝器，直接傳遞路徑字串給 PGlite
+ * - 這樣可以讓 PGlite 自動處理文件系統，提高跨平台兼容性（特別是 Windows）
+ * - 參考 zym 專案的成功實作
  */
 export class DatabaseManager {
   private static instance: DatabaseManager;
@@ -18,7 +22,7 @@ export class DatabaseManager {
     // 取得使用者資料目錄
     const userDataPath = app.getPath('userData');
     // PGlite 使用目錄而非單一檔案
-    // 在 Node.js 環境（Electron 主程序）中直接使用檔案系統路徑
+    // 直接使用檔案系統路徑，讓 PGlite 自動處理（跨平台兼容）
     this.dbPath = path.join(userDataPath, 'database');
   }
 
@@ -41,10 +45,10 @@ export class DatabaseManager {
     }
 
     try {
-      // 創建 PGlite 實例，使用 NodeFS 檔案系統
-      this.client = new PGlite({
-        fs: new NodeFS(this.dbPath),
-      });
+      // 創建 PGlite 實例，直接傳遞路徑字串
+      // PGlite 會自動處理文件系統，在 Node.js 環境中自動使用 NodeFS
+      // 這種方式在 Windows 環境下更穩定
+      this.client = new PGlite(this.dbPath);
 
       // 等待客戶端就緒
       await this.client.waitReady;
