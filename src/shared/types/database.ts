@@ -135,3 +135,20 @@ export interface ComparisonResult {
   timestamp: Date;
   metadata?: Record<string, any>; // 其他元資料
 }
+
+/**
+ * 額度追蹤介面
+ */
+export interface QuotaTracking {
+  id: string;
+  aiServiceId: string; // AI 服務 ID
+  quotaStatus: 'available' | 'depleted' | 'unknown'; // 額度狀態
+  quotaResetTime?: Date; // 額度重置時間
+  notifyBeforeMinutes: number; // 提前多少分鐘通知（預設60）
+  notifyEnabled: boolean; // 是否啟用通知
+  lastNotifiedAt?: Date; // 最後通知時間
+  markedDepletedAt?: Date; // 標記為用盡的時間
+  notes?: string; // 備註
+  createdAt: Date;
+  updatedAt: Date;
+}

@@ -133,6 +133,24 @@ export const CREATE_TABLES_SQL = {
       FOREIGN KEY (ai_service_id) REFERENCES ai_services(id)
     )
   `,
+
+  // 額度追蹤表
+  quotaTracking: `
+    CREATE TABLE IF NOT EXISTS quota_tracking (
+      id TEXT PRIMARY KEY,
+      ai_service_id TEXT NOT NULL,
+      quota_status TEXT DEFAULT 'unknown',
+      quota_reset_time TEXT,
+      notify_before_minutes INTEGER DEFAULT 60,
+      notify_enabled INTEGER DEFAULT 1,
+      last_notified_at TEXT,
+      marked_depleted_at TEXT,
+      notes TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (ai_service_id) REFERENCES ai_services(id)
+    )
+  `,
 };
 
 // 建立索引的SQL
@@ -200,5 +218,20 @@ export const CREATE_INDEXES_SQL = {
   comparisonResultsByStatus: `
     CREATE INDEX IF NOT EXISTS idx_comparison_results_status
     ON comparison_results(status)
+  `,
+
+  quotaTrackingByAI: `
+    CREATE INDEX IF NOT EXISTS idx_quota_tracking_ai_service_id
+    ON quota_tracking(ai_service_id)
+  `,
+
+  quotaTrackingByStatus: `
+    CREATE INDEX IF NOT EXISTS idx_quota_tracking_quota_status
+    ON quota_tracking(quota_status)
+  `,
+
+  quotaTrackingByResetTime: `
+    CREATE INDEX IF NOT EXISTS idx_quota_tracking_reset_time
+    ON quota_tracking(quota_reset_time)
   `,
 };

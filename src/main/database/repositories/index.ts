@@ -11,3 +11,4 @@ export {
   ComparisonSessionRepository,
   ComparisonResultRepository,
 } from './comparison-repository';
+export { QuotaRepository } from './quota-repository';
