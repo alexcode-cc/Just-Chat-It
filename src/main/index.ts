@@ -69,7 +69,7 @@ class Application {
     this.clipboardManager.startMonitoring();
 
     // 初始化通知管理器
-    this.notificationManager = new NotificationManager(this.windowManager);
+    this.notificationManager = new NotificationManager();
 
     // 設定 IPC handlers (傳入 windowManager, clipboardManager 和 notificationManager)
     setupIpcHandlers(this.windowManager, this.clipboardManager, this.notificationManager);

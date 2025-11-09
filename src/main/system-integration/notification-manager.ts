@@ -4,7 +4,6 @@
 
 import { Notification, BrowserWindow } from 'electron';
 import { QuotaRepository } from '../database/repositories';
-import { Database } from 'better-sqlite3';
 import { QuotaTracking } from '../../shared/types/database';
 
 export interface NotificationOptions {
@@ -22,8 +21,8 @@ export class NotificationManager {
   private readonly CHECK_INTERVAL_MS = 60000; // 每分鐘檢查一次
   private mainWindow: BrowserWindow | null = null;
 
-  constructor(db: Database) {
-    this.quotaRepository = new QuotaRepository(db);
+  constructor() {
+    this.quotaRepository = new QuotaRepository();
   }
 
   /**
