@@ -98,6 +98,18 @@ const electronAPI = {
   }) => ipcRenderer.invoke('history:search', query),
   getHistoryStats: (sessionId?: string) => ipcRenderer.invoke('history:get-stats', sessionId),
 
+  // 日誌和錯誤處理
+  log: (level: string, message: string, context?: any, error?: any) =>
+    ipcRenderer.invoke('log:write', level, message, context, error),
+  getLogFiles: () => ipcRenderer.invoke('log:get-files'),
+  readLogFile: (filePath: string, maxLines?: number) =>
+    ipcRenderer.invoke('log:read-file', filePath, maxLines),
+  exportLogs: () => ipcRenderer.invoke('log:export'),
+  openLogDirectory: () => ipcRenderer.invoke('log:open-directory'),
+  getErrorStats: () => ipcRenderer.invoke('error:get-stats'),
+  clearErrorStats: () => ipcRenderer.invoke('error:clear-stats'),
+  setLogLevel: (level: string) => ipcRenderer.invoke('log:set-level', level),
+
   // IPC 事件監聽
   onNavigateTo: (callback: (route: string) => void) => {
     ipcRenderer.on('navigate-to', (event, route) => callback(route));

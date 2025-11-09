@@ -36,6 +36,11 @@ const routes: RouteRecordRaw[] = [
     name: 'History',
     component: () => import('@/components/history/HistoryBrowser.vue'),
   },
+  {
+    path: '/logs',
+    name: 'Logs',
+    component: () => import('@/components/settings/LogViewer.vue'),
+  },
 ];
 
 export default routes;

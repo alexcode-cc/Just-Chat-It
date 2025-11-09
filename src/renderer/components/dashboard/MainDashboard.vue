@@ -150,6 +150,18 @@
                     </v-card-text>
                   </v-card>
                 </v-col>
+                <v-col cols="12" sm="6" md="3">
+                  <v-card
+                    class="function-card liquid-glass-interactive"
+                    @click="$router.push('/logs')"
+                  >
+                    <v-card-text class="text-center">
+                      <v-icon size="48" color="teal" class="mb-2">mdi-file-document-multiple</v-icon>
+                      <h4 class="text-h6 mb-1">日誌查看</h4>
+                      <p class="text-caption text-grey">查看系統日誌和錯誤</p>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
               </v-row>
             </v-card-text>
           </v-card>
