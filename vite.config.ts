@@ -19,11 +19,12 @@ export default defineConfig({
             minify: process.env.NODE_ENV !== 'development',
             outDir: 'dist/main',
             rollupOptions: {
-              external: ['electron', 'better-sqlite3'],
+              external: ['electron', 'better-sqlite3', '@electric-sql/pglite'],
             },
           },
-          optimizeDeps: {
-            exclude: ['@electric-sql/pglite'],
+          resolve: {
+            // 確保 Node.js 內建模組被正確解析
+            conditions: ['node'],
           },
         },
       },

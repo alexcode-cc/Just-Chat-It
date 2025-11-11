@@ -12,7 +12,8 @@
 
   "files": [
     "dist/**/*",
-    "package.json"
+    "package.json",
+    "node_modules/@electric-sql/**/*"
   ],
 
   "extraResources": [

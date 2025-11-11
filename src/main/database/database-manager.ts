@@ -1,5 +1,6 @@
 import { PGlite } from '@electric-sql/pglite';
 import path from 'path';
+import { pathToFileURL } from 'url';
 import { app } from 'electron';
 import { CREATE_TABLES_SQL, CREATE_INDEXES_SQL } from './schema';
 import { DB_NAME } from '../../shared/constants/database';
@@ -25,8 +26,14 @@ export class DatabaseManager {
     // 取得使用者資料目錄
     const userDataPath = app.getPath('userData');
     // PGlite 使用目錄而非單一檔案
-    // 直接使用檔案系統路徑，讓 PGlite 自動處理（跨平台兼容）
-    this.dbPath = path.join(userDataPath, 'database');
+    // 使用絕對路徑並標準化（Windows 兼容性）
+    const absolutePath = path.resolve(userDataPath, 'database');
+    // 在 Windows 上將反斜杠轉換為正斜杠，確保跨平台兼容性
+    this.dbPath = process.platform === 'win32'
+      ? absolutePath.replace(/\\/g, '/')
+      : absolutePath;
+
+    console.log(`[DatabaseManager] DB path: ${this.dbPath}`);
   }
 
   /**
@@ -48,13 +55,22 @@ export class DatabaseManager {
     }
 
     try {
+      console.log(`[DatabaseManager] Initializing database...`);
+      console.log(`[DatabaseManager] Platform: ${process.platform}`);
+      console.log(`[DatabaseManager] Node.js version: ${process.version}`);
+      console.log(`[DatabaseManager] Database path: ${this.dbPath}`);
+
       // 創建 PGlite 實例，直接傳遞路徑字串
       // PGlite 會自動處理文件系統，在 Node.js 環境中自動使用 NodeFS
-      // 這種方式在 Windows 環境下更穩定
+      // Windows 路徑已標準化為正斜杠格式
       this.client = new PGlite(this.dbPath);
+
+      console.log(`[DatabaseManager] PGlite instance created, waiting for ready...`);
 
       // 等待客戶端就緒
       await this.client.waitReady;
+
+      console.log(`[DatabaseManager] PGlite client ready`);
 
       // 建立所有表格
       await this.createTables();
@@ -63,9 +79,14 @@ export class DatabaseManager {
       await this.createIndexes();
 
       this.isInitialized = true;
-      console.log(`Database initialized at: ${this.dbPath}`);
+      console.log(`[DatabaseManager] Database initialized successfully at: ${this.dbPath}`);
     } catch (error) {
-      console.error('Failed to initialize database:', error);
+      console.error('[DatabaseManager] Failed to initialize database:', error);
+      console.error('[DatabaseManager] Error details:', {
+        name: (error as Error).name,
+        message: (error as Error).message,
+        stack: (error as Error).stack,
+      });
       throw error;
     }
   }
