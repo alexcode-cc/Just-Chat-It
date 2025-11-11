@@ -54,6 +54,14 @@ class Application {
       await this.dbManager.initialize();
       this.logger.info('Database initialized');
 
+      // 啟動 PostgreSQL 伺服器（僅開發模式）
+      // 這允許使用標準 PostgreSQL 工具（如 psql）連接到 PGlite 實例進行調試
+      try {
+        await this.dbManager.startServer(5432);
+      } catch (error) {
+        this.logger.warn('Failed to start PGlite server (non-critical)', error as Error);
+      }
+
       // 初始化預設資料（包含預設熱鍵設定）
       await initializeDefaultData();
       this.logger.info('Default data initialized');
