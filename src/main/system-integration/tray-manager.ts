@@ -35,8 +35,10 @@ export class TrayManager {
     // 設定工具提示
     this.tray.setToolTip('Just Chat It - 多AI聊天助手');
 
-    // 設定托盤選單
-    this.updateContextMenu();
+    // 設定托盤選單（異步）
+    this.updateContextMenu().catch(err => {
+      console.error('Failed to update context menu:', err);
+    });
 
     // 單擊托盤圖示時顯示/隱藏主視窗
     this.tray.on('click', () => {
@@ -56,11 +58,11 @@ export class TrayManager {
   /**
    * 更新托盤選單
    */
-  updateContextMenu(): void {
+  async updateContextMenu(): Promise<void> {
     if (!this.tray) return;
 
     // 取得所有 AI 服務
-    const aiServices = this.aiServiceRepo.findAll();
+    const aiServices = await this.aiServiceRepo.findAll();
     const availableServices = aiServices.filter((s) => s.isAvailable);
 
     // 建立 AI 服務選單項目
