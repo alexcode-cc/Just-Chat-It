@@ -25,8 +25,11 @@
 **完成任務**: 15/15 (100%)
 **測試覆蓋**: 63+ 測試案例
 **程式碼行數**: ~16,740+ 行
+**資料庫**: PGlite (PostgreSQL WASM)
 
 > 🎉 **MVP 開發已完成！** 所有核心功能已實作並測試完成，應用程式已準備好進行生產環境部署。
+>
+> 🔄 **資料庫已重構**: 從 SQLite 遷移到 PGlite，提供更強大的 PostgreSQL 功能和更好的跨平台兼容性。
 
 ## ✨ 主要特色
 
@@ -130,7 +133,8 @@
 
 ### 狀態管理與資料
 - **Pinia** - Vue 3 狀態管理（6 個主要 Store）
-- **SQLite** (better-sqlite3) - 本地資料庫（9 個表）
+- **PGlite** 0.3.3 (PostgreSQL WASM) - 本地資料庫（10 個表）
+- **pglite-server** 0.1.4 - 開發工具（PostgreSQL Wire Protocol）
 - **Repository Pattern** - 資料存取層（8 個 Repository）
 
 ### 測試與品質
@@ -149,20 +153,12 @@
 ### 系統需求
 - Node.js 18.0 或更高版本
 - npm 或 yarn 套件管理器
+- 支援的作業系統：
+  - Windows 10/11 (x64, ia32)
+  - macOS 10.15+ (x64, arm64)
+  - Linux (x64)
 
-#### Windows 特別需求
-- Python 3.11.x（推薦）或 3.12+ with setuptools
-- Visual Studio Build Tools 2019 或更新版本（含 "Desktop development with C++" 工作負載）
-- Windows SDK 10.0.x
-
-> ⚠️ **Windows 用戶注意**: 如果遇到 `better-sqlite3` 建置錯誤，請參考 [Windows Build Guide](docs/WINDOWS_BUILD_GUIDE.md) 或執行自動修復腳本：
-> ```powershell
-> # PowerShell (推薦)
-> .\fix-windows-sqlite-build.ps1
->
-> # 或使用命令提示字元
-> fix-windows-sqlite-build.bat
-> ```
+> ✅ **PGlite 優勢**: 使用純 WASM 實作，無需原生模組編譯，大幅簡化了 Windows 環境的安裝過程！
 
 ### 開發環境設定
 
@@ -184,26 +180,19 @@ npm run build
 npm run dist
 ```
 
-#### Windows 平台特殊說明
+#### Windows 平台說明
 
-如果 `npm install` 在 Windows 上失敗並顯示 `ModuleNotFoundError: No module named 'distutils'`：
+使用 PGlite 後，Windows 環境的設定變得更簡單：
 
-**快速修復**:
-```powershell
-# PowerShell 執行自動修復腳本
-.\fix-windows-sqlite-build.ps1
-```
+✅ **無需安裝**:
+- ~~Python~~
+- ~~Visual Studio Build Tools~~
+- ~~Windows SDK~~
 
-**手動修復**:
-```cmd
-# 1. 安裝 setuptools (修復 Python 3.12+ 缺少 distutils)
-pip install setuptools
-
-# 2. 重新建置
-npm rebuild better-sqlite3
-```
-
-詳細的故障排除步驟請參考：[Windows Build Guide](docs/WINDOWS_BUILD_GUIDE.md)
+如遇到問題，請參考：
+- [PGlite Server 整合指南](PGLITE_SERVER_INTEGRATION.md)
+- [Windows 11 修正文檔](WINDOWS_FIX.md)
+- [資料庫架構文檔](docs/DATABASE_ARCHITECTURE.md)
 
 ### 測試
 
@@ -249,7 +238,11 @@ Just-Chat-It/
 │   └── steering/               # 專案指導文件
 ├── src/                        # 原始碼目錄
 │   ├── main/                   # Electron 主程序
-│   │   ├── database/           # SQLite 資料庫管理
+│   │   ├── database/           # PGlite 資料庫管理
+│   │   │   ├── database-manager.ts    # 資料庫管理器（單例）
+│   │   │   ├── schema.ts              # 表結構定義
+│   │   │   ├── init-data.ts           # 預設資料初始化
+│   │   │   └── repositories/          # Repository 資料存取層
 │   │   ├── system-integration/ # 系統整合（托盤、熱鍵、剪貼簿）
 │   │   ├── performance/        # 效能監控
 │   │   ├── updater/            # 自動更新
@@ -314,7 +307,12 @@ Just-Chat-It/
 - **[待辦事項](TODO.md)** - 後續開發計畫和改進項目
 - **[開發指南](CLAUDE.md)** - 開發規範和最佳實踐
 - **[AI 代理指南](AGENTS.md)** - AI 開發工具使用指南
-- **[Windows 建置指南](docs/WINDOWS_BUILD_GUIDE.md)** - Windows 平台建置問題解決方案
+
+### 資料庫文檔
+- **[資料庫架構](docs/DATABASE_ARCHITECTURE.md)** - PGlite 完整技術文檔
+- **[PGlite Server 整合](PGLITE_SERVER_INTEGRATION.md)** - 開發工具整合指南
+- **[Windows 11 修正](WINDOWS_FIX.md)** - Windows 環境配置和故障排除
+- **[運行時錯誤修正](RUNTIME_ERRORS_FIX.md)** - 常見問題解決方案
 
 ### 任務文檔
 - [Task 1: 專案基礎架構](docs/mvp/task-1.md)
@@ -380,15 +378,18 @@ Just-Chat-It/
 
 ## 📝 更新日誌
 
-### v1.0.0-MVP (2025-11-09)
+### v1.0.0-MVP (2025-11-11)
 - ✅ 完成所有 15 個核心任務
 - ✅ 實作完整的 AI 服務整合
 - ✅ 完成 Liquid Glass 視覺系統
 - ✅ 實作效能監控和自動更新
 - ✅ 完成測試框架（63+ 測試案例）
 - ✅ 完成跨平台打包配置
+- 🔄 資料庫重構為 PGlite（PostgreSQL WASM）
+- ✅ Windows 11 完整兼容性
+- ✅ 開發工具整合（pglite-server）
 
-查看 [MVP 開發總結](MVP_SUMMARY.md) 了解詳細資訊。
+查看 [MVP 開發總結](MVP_SUMMARY.md) 和 [資料庫架構文檔](docs/DATABASE_ARCHITECTURE.md) 了解詳細資訊。
 
 ---
 

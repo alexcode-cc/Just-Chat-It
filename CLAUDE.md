@@ -7,10 +7,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Just Chat It 是一個現代化的多AI聊天桌面應用程式，採用 Electron + Vue 3 + Vuetify 架構，實現與多個AI服務（ChatGPT、Claude、Gemini等）的同時對話功能。
 
 **當前版本**: MVP v1.0.0 (已完成所有 15 個核心任務)
-**專案狀態**: ✅ MVP 開發完成，準備部署
+**專案狀態**: ✅ MVP 開發完成，資料庫已重構為 PGlite
+
 **重要文檔**:
 - MVP 總結: `MVP_SUMMARY.md`
 - 待辦事項: `TODO.md`
+- 資料庫架構: `docs/DATABASE_ARCHITECTURE.md`
+- PGlite Server 整合: `PGLITE_SERVER_INTEGRATION.md`
+- Windows 11 修正: `WINDOWS_FIX.md`
+- 運行時錯誤修正: `RUNTIME_ERRORS_FIX.md`
 - 任務詳情: `docs/mvp/task-*.md`
 
 ## 開發命令
@@ -113,16 +118,34 @@ src/
 - **SettingsStore**: 應用程式設定
 
 ### 資料庫設計
-PGlite (PostgreSQL WASM) 表格（共 9 個）：
-- `ai_services`: AI 服務配置
-- `chat_sessions`: 聊天會話
-- `chat_messages`: 聊天訊息
-- `prompts`: 提示詞庫
-- `app_settings`: 應用程式設定
-- `window_states`: 視窗狀態
-- `quota_records`: 額度追蹤
-- `comparison_sessions`: 比較會話
-- `comparison_responses`: AI 回應
+
+**使用技術**: PGlite 0.3.3 (PostgreSQL 17.4 WASM)
+
+**核心優勢**:
+- ✅ 純 WASM 實作，無需原生模組編譯
+- ✅ 完整的 PostgreSQL 功能支援
+- ✅ 跨平台兼容（Windows、macOS、Linux）
+- ✅ 本地資料存儲，隱私保護
+- ✅ 支援事務、索引、外鍵等高級功能
+
+**表格清單**（共 10 個）：
+- `ai_services`: AI 服務配置（ChatGPT、Claude等）
+- `chat_sessions`: 聊天會話管理
+- `chat_messages`: 對話訊息記錄
+- `prompts`: 提示詞庫（用戶自訂模板）
+- `app_settings`: 應用程式設定（鍵值對）
+- `window_states`: 視窗狀態持久化
+- `hotkey_settings`: 全域熱鍵配置
+- `quota_tracking`: API 額度追蹤
+- `comparison_sessions`: AI 回應比較會話
+- `comparison_results`: AI 回應比較結果
+
+**詳細架構**: 參見 `docs/DATABASE_ARCHITECTURE.md`
+
+**開發工具**: pglite-server 0.1.4
+- 開發模式下提供 PostgreSQL Wire Protocol 伺服器
+- 可使用 psql、DBeaver、pgAdmin 等標準工具連接
+- 連接方式: `psql -h localhost -p 5432 -U postgres -d postgres`
 
 ### Liquid Glass 視覺效果
 - 採用 backdrop-filter 和 CSS 變數實現玻璃擬態效果
@@ -263,11 +286,19 @@ PGlite (PostgreSQL WASM) 表格（共 9 個）：
 
 ### 關鍵技術決策
 
-1. **PGlite 資料庫**
-   - 使用 PostgreSQL WASM 實作，無需原生編譯
+1. **PGlite 資料庫架構**
+   - 版本: PGlite 0.3.3 (基於 PostgreSQL 17.4)
+   - 純 WASM 實作，無需原生模組編譯
    - 異步 API 設計，所有 Repository 方法使用 async/await
    - 使用參數化查詢（$1, $2...）防止 SQL 注入
-   - 支援完整的 PostgreSQL 功能
+   - 支援完整的 PostgreSQL 功能（事務、索引、外鍵等）
+   - Windows 路徑兼容性：使用正斜杠格式路徑
+   - 開發工具：pglite-server 提供標準 PostgreSQL 連接
+   - **實作經驗**:
+     - DatabaseManager 單例模式管理連接
+     - Repository Pattern 實現資料存取層
+     - IPC handlers 提供渲染程序訪問
+     - 詳細架構參見 `docs/DATABASE_ARCHITECTURE.md`
 
 2. **WebView 隔離策略**
    - 使用 partition 機制隔離各 AI 服務
@@ -292,11 +323,18 @@ PGlite (PostgreSQL WASM) 表格（共 9 個）：
    - Pinia actions 中避免直接修改其他 Store 的 state
 
 3. **打包與分發**
-   - PGlite 是純 WASM 實作，無需原生模組編譯（解決 Windows 建置問題）
-   - electron-builder 設定 `npmRebuild: false`
-   - macOS 公證需要 Apple Developer 帳號
-   - Windows 防毒軟體可能誤報，需要程式碼簽署
+   - **PGlite 配置**:
+     - 純 WASM 實作，無需原生模組編譯
+     - Vite: 將 `@electric-sql/pglite` 標記為 external
+     - electron-builder: 明確包含 `node_modules/@electric-sql/**/*`
+     - 設定 `npmRebuild: false`（無原生模組）
+     - 確保 WASM 文件被正確打包
+   - **平台相關**:
+     - Windows: 路徑標準化，防毒軟體可能誤報
+     - macOS: 公證需要 Apple Developer 帳號
+     - Linux: 測試不同發行版兼容性
    - 測試所有平台的安裝和更新流程
+   - 詳細配置參見 `WINDOWS_FIX.md` 和 `PGLITE_SERVER_INTEGRATION.md`
 
 ### 效能優化經驗
 
