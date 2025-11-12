@@ -2,7 +2,7 @@
 
 ## 概述
 
-本次更新將 zym 專案的 pglite-server 架構完整整合到 Just-Chat-It 專案，以解決 Windows 11 環境下資料庫無法正常啟動的問題。
+本次更新將 ZyPlayer 專案的 pglite-server 架構完整整合到 Just-Chat-It 專案，以解決 Windows 11 環境下資料庫無法正常啟動的問題。
 
 ## 主要變更
 
@@ -207,7 +207,7 @@ SELECT * FROM chat_sessions;
 - `@electric-sql/pglite`: `0.3.3`
 - 基於 PostgreSQL 17.4
 - 純 WASM 實作，無需原生編譯
-- 與 zym 專案保持一致
+- 與 ZyPlayer 專案保持一致
 
 ### pglite-server 工作原理
 
@@ -228,9 +228,11 @@ SELECT * FROM chat_sessions;
 
 ## 參考資源
 
-- **zym 專案**: https://github.com/alexcode-cc/zym
 - **PGlite**: https://github.com/electric-sql/pglite
 - **pglite-server**: https://www.npmjs.com/package/pglite-server
+
+特別感謝以下開源專案：
+- **ZyPlayer 專案**: https://github.com/alexcode-cc/ZyPlayer
 
 ## 下一步
 
@@ -241,10 +243,10 @@ SELECT * FROM chat_sessions;
 
 ## 總結
 
-這次整合基於 zym 專案的成功經驗，將完整的 pglite-server 架構引入到 Just-Chat-It 專案。主要改進包括：
+這次整合基於 ZyPlayer 專案的成功經驗，將完整的 pglite-server 架構引入到 Just-Chat-It 專案。主要改進包括：
 
 - ✅ 添加開發模式下的 PostgreSQL 伺服器支援
-- ✅ 保持與 zym 專案相同的 PGlite 版本（0.3.3）
+- ✅ 保持與 ZyPlayer 專案相同的 PGlite 版本（0.3.3）
 - ✅ 優化 Windows 兼容性
 - ✅ 提供標準 PostgreSQL 工具連接方式
 - ✅ 非侵入性設計，不影響生產環境

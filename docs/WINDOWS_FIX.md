@@ -12,7 +12,7 @@ TypeError [ERR_INVALID_URL_SCHEME]: The URL must be of scheme file
 
 ## 根本原因
 
-經過與 zym 專案（同樣使用 PGlite 0.3.3，在 Windows 11 上正常運行）的對比分析，發現以下關鍵差異：
+經過與 ZyPlayer 專案（同樣使用 PGlite 0.3.3，在 Windows 11 上正常運行）的對比分析，發現以下關鍵差異：
 
 ### 1. 路徑格式問題
 - **問題**: Windows 路徑使用反斜杠 (`C:\Users\...`)，但 PGlite 內部某些操作可能期望正斜杠格式
@@ -95,13 +95,13 @@ resolve: {
 - 明確包含 PGlite 的 node_modules
 - 確保 WASM 文件和其他資源被正確打包
 
-## 與 zym 專案的對比
+## 與 ZyPlayer 專案的對比
 
-### zym 專案成功的關鍵因素
+### ZyPlayer 專案成功的關鍵因素
 
-1. **路徑處理**: zym 使用 `path.join` 但其 Electron 版本和配置可能自動處理了路徑轉換
+1. **路徑處理**: ZyPlayer 使用 `path.join` 但其 Electron 版本和配置可能自動處理了路徑轉換
 
-2. **依賴處理**: zym 的打包配置確保 PGlite 作為 external 依賴
+2. **依賴處理**: ZyPlayer 的打包配置確保 PGlite 作為 external 依賴
 
 3. **版本一致性**: 兩個專案都使用相同的 PGlite 版本 (0.3.3)
 
@@ -195,7 +195,7 @@ npm run dist:win
 ## 參考資源
 
 - PGlite 官方文檔: https://github.com/electric-sql/pglite
-- zym 專案: https://github.com/alexcode-cc/zym
+- ZyPlayer 專案: https://github.com/Hiram-Wong/ZyPlayer
 - Electron Builder 文檔: https://www.electron.build/
 - Vite Electron Plugin: https://github.com/electron-vite/vite-plugin-electron
 
@@ -206,4 +206,4 @@ npm run dist:win
 2. **依賴外部化** - PGlite 作為 external 依賴而非打包進主程序
 3. **資源包含** - 確保 PGlite 的 node_modules 被包含在打包輸出中
 
-這些修正確保了與 zym 專案相同的成功模式，同時保持了本專案的架構完整性。
+這些修正確保了與 ZyPlayer 專案相同的成功模式，同時保持了本專案的架構完整性。

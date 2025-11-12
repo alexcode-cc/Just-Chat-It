@@ -12,7 +12,7 @@ import type { Server } from 'net';
  * 重構說明：
  * - 移除 NodeFS 包裝器，直接傳遞路徑字串給 PGlite
  * - 這樣可以讓 PGlite 自動處理文件系統，提高跨平台兼容性（特別是 Windows）
- * - 參考 zym 專案的成功實作
+ * - 參考 ZyPlayer 專案的成功實作
  * - 新增 pglite-server 支援，允許使用標準 PostgreSQL 工具連接（僅開發模式）
  */
 export class DatabaseManager {

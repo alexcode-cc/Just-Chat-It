@@ -782,7 +782,7 @@ await DatabaseManager.getInstance().transaction(async (client) => {
 
 ### 相關專案
 
-- [zym 專案](https://github.com/alexcode-cc/zym) - 成功的 PGlite 實作範例
+- [ZyPlayer 專案](https://github.com/Hiram-Wong/ZyPlayer) - 成功的 PGlite 實作範例
 
 ### 內部文檔
 
