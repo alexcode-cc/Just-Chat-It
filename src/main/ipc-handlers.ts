@@ -8,6 +8,7 @@ import {
   HotkeySettingsRepository,
   QuotaRepository,
 } from './database/repositories';
+import { DatabaseManager } from './database/database-manager';
 import { WindowManager } from './window-manager';
 import { ClipboardManager, NotificationManager } from './system-integration';
 import { contentCaptureManager } from './services/content-capture-manager';
@@ -152,6 +153,27 @@ export function setupIpcHandlers(
           }
           return promptRepo.createPrompt(data.title, data.content, data.category, data.tags);
 
+        case 'app_settings':
+          // 處理應用程式設定（鍵值對）
+          const dbMgr = DatabaseManager.getInstance();
+          if (data._delete && data.key) {
+            // 刪除設定
+            await dbMgr.query('DELETE FROM app_settings WHERE key = $1', [data.key]);
+            return { success: true };
+          }
+          if (data.key && data.value !== undefined) {
+            // 新增或更新設定（使用 UPSERT）
+            await dbMgr.query(
+              `INSERT INTO app_settings (key, value, updated_at)
+               VALUES ($1, $2, now())
+               ON CONFLICT (key)
+               DO UPDATE SET value = $2, updated_at = now()`,
+              [data.key, JSON.stringify(data.value)]
+            );
+            return { key: data.key, value: data.value };
+          }
+          throw new Error('Invalid app_settings data: key and value are required');
+
         default:
           throw new Error(`Unknown table: ${table}`);
       }
@@ -212,6 +234,20 @@ export function setupIpcHandlers(
             return promptRepo.findRecentlyUsed(query.limit || 10);
           }
           return promptRepo.findAll();
+
+        case 'app_settings':
+          // 使用 DatabaseManager 的通用查詢方法處理鍵值對表
+          const dbManager = DatabaseManager.getInstance();
+          if (query?.key) {
+            // 查詢單個設定
+            const result = await dbManager.queryOne(
+              'SELECT key, value FROM app_settings WHERE key = $1',
+              [query.key]
+            );
+            return result;
+          }
+          // 查詢所有設定
+          return dbManager.query('SELECT key, value FROM app_settings');
 
         default:
           throw new Error(`Unknown table: ${table}`);

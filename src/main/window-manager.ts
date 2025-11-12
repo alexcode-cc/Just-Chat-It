@@ -39,7 +39,7 @@ export class WindowManager {
       webPreferences: {
         contextIsolation: true,
         nodeIntegration: false,
-        preload: path.join(__dirname, '../preload/index.js'),
+        preload: path.join(__dirname, '../preload/preload.js'),
       },
       frame: false,
       transparent: true,
@@ -78,7 +78,7 @@ export class WindowManager {
       webPreferences: {
         contextIsolation: true,
         nodeIntegration: false,
-        preload: path.join(__dirname, '../preload/index.js'),
+        preload: path.join(__dirname, '../preload/preload.js'),
         webviewTag: true, // 啟用 webview 標籤以載入 AI 服務網頁
       },
       frame: false,

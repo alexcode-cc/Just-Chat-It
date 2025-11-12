@@ -294,7 +294,10 @@ onMounted(async () => {
   if (settingsStore.liquidGlassSettings.enabled) {
     // 為卡片元素添加效果
     const cards = [aiServicesCard.value, statusCard.value, planCard.value, demoCard.value].filter(
-      (card): card is HTMLElement => card !== null
+      (card): card is HTMLElement =>
+        card !== null &&
+        card instanceof HTMLElement &&
+        typeof card.getBoundingClientRect === 'function'
     );
 
     effects = cards.map((card) => {

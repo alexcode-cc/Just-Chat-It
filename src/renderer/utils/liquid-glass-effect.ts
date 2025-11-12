@@ -35,7 +35,15 @@ export class LiquidGlassEffect {
   };
 
   constructor(element: HTMLElement, options: LiquidGlassOptions = {}) {
-    this.element = element;
+    // 驗證元素是否為有效的 DOM 元素
+    if (!element || !(element instanceof HTMLElement) || typeof element.getBoundingClientRect !== 'function') {
+      console.error('LiquidGlassEffect: Invalid element provided', element);
+      // 創建一個空的 div 元素作為回退
+      this.element = document.createElement('div');
+    } else {
+      this.element = element;
+    }
+
     this.options = { ...LiquidGlassEffect.DEFAULT_OPTIONS, ...options };
     this.rect = this.element.getBoundingClientRect();
     this.init();
