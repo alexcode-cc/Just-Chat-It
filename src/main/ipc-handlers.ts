@@ -118,40 +118,40 @@ export function setupIpcHandlers(
       switch (table) {
         case 'ai_services':
           if (data._delete) {
-            return aiServiceRepo.delete(data.id);
+            return await aiServiceRepo.delete(data.id);
           }
-          return aiServiceRepo.upsert(data);
+          return await aiServiceRepo.upsert(data);
 
         case 'chat_sessions':
           if (data._delete) {
-            chatMessageRepo.deleteBySession(data.id);
-            return chatSessionRepo.delete(data.id);
+            await chatMessageRepo.deleteBySession(data.id);
+            return await chatSessionRepo.delete(data.id);
           }
           if (data.id) {
             if (data.title) {
-              chatSessionRepo.updateTitle(data.id, data.title);
+              await chatSessionRepo.updateTitle(data.id, data.title);
             }
-            return chatSessionRepo.findById(data.id);
+            return await chatSessionRepo.findById(data.id);
           }
-          return chatSessionRepo.createSession(data.aiServiceId, data.title);
+          return await chatSessionRepo.createSession(data.aiServiceId, data.title);
 
         case 'chat_messages':
-          return chatMessageRepo.createMessage(data.sessionId, data.content, data.isUser, data.metadata);
+          return await chatMessageRepo.createMessage(data.sessionId, data.content, data.isUser, data.metadata);
 
         case 'prompts':
           if (data._delete) {
-            return promptRepo.delete(data.id);
+            return await promptRepo.delete(data.id);
           }
           if (data.id) {
             if (data.isFavorite !== undefined) {
-              promptRepo.toggleFavorite(data.id);
+              await promptRepo.toggleFavorite(data.id);
             }
             if (data.usageCount !== undefined) {
-              promptRepo.incrementUsage(data.id);
+              await promptRepo.incrementUsage(data.id);
             }
-            return promptRepo.updatePrompt(data.id, data);
+            return await promptRepo.updatePrompt(data.id, data);
           }
-          return promptRepo.createPrompt(data.title, data.content, data.category, data.tags);
+          return await promptRepo.createPrompt(data.title, data.content, data.category, data.tags);
 
         case 'app_settings':
           // 處理應用程式設定（鍵值對）
@@ -189,51 +189,51 @@ export function setupIpcHandlers(
       switch (table) {
         case 'ai_services':
           if (query?.id) {
-            return aiServiceRepo.findById(query.id);
+            return await aiServiceRepo.findById(query.id);
           }
           if (query?.availableOnly) {
-            return aiServiceRepo.findAvailableServices();
+            return await aiServiceRepo.findAvailableServices();
           }
-          return aiServiceRepo.findAll();
+          return await aiServiceRepo.findAll();
 
         case 'chat_sessions':
           if (query?.id) {
-            return chatSessionRepo.findById(query.id);
+            return await chatSessionRepo.findById(query.id);
           }
           if (query?.aiServiceId) {
-            return chatSessionRepo.findByAIService(query.aiServiceId);
+            return await chatSessionRepo.findByAIService(query.aiServiceId);
           }
           if (query?.activeOnly) {
-            return chatSessionRepo.findActiveSessions();
+            return await chatSessionRepo.findActiveSessions();
           }
-          return chatSessionRepo.findAll();
+          return await chatSessionRepo.findAll();
 
         case 'chat_messages':
           if (query?.sessionId) {
-            return chatMessageRepo.findBySession(query.sessionId, query?.limit);
+            return await chatMessageRepo.findBySession(query.sessionId, query?.limit);
           }
           if (query?.query) {
-            return chatMessageRepo.search(query.query, query?.sessionId);
+            return await chatMessageRepo.search(query.query, query?.sessionId);
           }
           return [];
 
         case 'prompts':
           if (query?.id) {
-            return promptRepo.findById(query.id);
+            return await promptRepo.findById(query.id);
           }
           if (query?.category) {
-            return promptRepo.findByCategory(query.category);
+            return await promptRepo.findByCategory(query.category);
           }
           if (query?.favoritesOnly) {
-            return promptRepo.findFavorites();
+            return await promptRepo.findFavorites();
           }
           if (query?.query) {
-            return promptRepo.search(query.query);
+            return await promptRepo.search(query.query);
           }
           if (query?.recentOnly) {
-            return promptRepo.findRecentlyUsed(query.limit || 10);
+            return await promptRepo.findRecentlyUsed(query.limit || 10);
           }
-          return promptRepo.findAll();
+          return await promptRepo.findAll();
 
         case 'app_settings':
           // 使用 DatabaseManager 的通用查詢方法處理鍵值對表
@@ -276,10 +276,10 @@ export function setupIpcHandlers(
       const chatWindow = windowManager.createChatWindow(serviceId);
 
       // 載入 AI 服務網址
-      const service = aiServiceRepo.findById(serviceId);
+      const service = await aiServiceRepo.findById(serviceId);
       if (service) {
         await chatWindow.loadURL(service.webUrl);
-        aiServiceRepo.updateLastUsed(serviceId);
+        await aiServiceRepo.updateLastUsed(serviceId);
       }
 
       return { success: true, existed: false };
@@ -292,7 +292,7 @@ export function setupIpcHandlers(
   // 視窗狀態管理
   ipcMain.handle('window-state:get', async (event, windowId: string) => {
     try {
-      return windowStateRepo.findById(windowId);
+      return await windowStateRepo.findById(windowId);
     } catch (error) {
       console.error(`Error getting window state for ${windowId}:`, error);
       return null;
@@ -357,7 +357,7 @@ export function setupIpcHandlers(
 
   ipcMain.handle('hotkey:get-by-id', async (event, id: string) => {
     try {
-      return hotkeySettingsRepo.findById(id);
+      return await hotkeySettingsRepo.findById(id);
     } catch (error) {
       console.error(`Error getting hotkey ${id}:`, error);
       return null;
@@ -708,13 +708,13 @@ export function setupIpcHandlers(
    */
   ipcMain.handle('history:export-markdown', async (event, sessionId: string) => {
     try {
-      const session = chatSessionRepo.findById(sessionId);
+      const session = await chatSessionRepo.findById(sessionId);
       if (!session) {
         throw new Error('Session not found');
       }
 
-      const messages = chatMessageRepo.findBySession(sessionId);
-      const aiService = aiServiceRepo.findById(session.aiServiceId);
+      const messages = await chatMessageRepo.findBySession(sessionId);
+      const aiService = await aiServiceRepo.findById(session.aiServiceId);
 
       // 建立 Markdown 內容
       let markdown = `# ${session.title}\n\n`;
@@ -745,13 +745,13 @@ export function setupIpcHandlers(
    */
   ipcMain.handle('history:export-json', async (event, sessionId: string) => {
     try {
-      const session = chatSessionRepo.findById(sessionId);
+      const session = await chatSessionRepo.findById(sessionId);
       if (!session) {
         throw new Error('Session not found');
       }
 
-      const messages = chatMessageRepo.findBySession(sessionId);
-      const aiService = aiServiceRepo.findById(session.aiServiceId);
+      const messages = await chatMessageRepo.findBySession(sessionId);
+      const aiService = await aiServiceRepo.findById(session.aiServiceId);
 
       const exportData = {
         session: {
@@ -799,8 +799,8 @@ export function setupIpcHandlers(
     ) => {
       try {
         let messages = query.sessionId
-          ? chatMessageRepo.findBySession(query.sessionId)
-          : chatMessageRepo.findAll();
+          ? await chatMessageRepo.findBySession(query.sessionId)
+          : await chatMessageRepo.findAll();
 
         // 應用篩選條件
         if (query.searchText) {
@@ -809,7 +809,7 @@ export function setupIpcHandlers(
         }
 
         if (query.aiServiceId) {
-          const sessions = chatSessionRepo.findByAIService(query.aiServiceId);
+          const sessions = await chatSessionRepo.findByAIService(query.aiServiceId);
           const sessionIds = new Set(sessions.map((s) => s.id));
           messages = messages.filter((msg) => sessionIds.has(msg.sessionId));
         }
@@ -848,12 +848,12 @@ export function setupIpcHandlers(
       let totalMessages = 0;
 
       if (sessionId) {
-        const session = chatSessionRepo.findById(sessionId);
+        const session = await chatSessionRepo.findById(sessionId);
         sessions = session ? [session] : [];
-        totalMessages = chatMessageRepo.countBySession(sessionId);
+        totalMessages = await chatMessageRepo.countBySession(sessionId);
       } else {
-        sessions = chatSessionRepo.findAll();
-        const allMessages = chatMessageRepo.findAll();
+        sessions = await chatSessionRepo.findAll();
+        const allMessages = await chatMessageRepo.findAll();
         totalMessages = allMessages.length;
       }
 
@@ -871,7 +871,7 @@ export function setupIpcHandlers(
           stats.byAIService[aiServiceId] = { sessions: 0, messages: 0 };
         }
         stats.byAIService[aiServiceId].sessions++;
-        stats.byAIService[aiServiceId].messages += chatMessageRepo.countBySession(
+        stats.byAIService[aiServiceId].messages += await chatMessageRepo.countBySession(
           (session as any).id
         );
       }

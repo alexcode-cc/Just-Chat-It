@@ -202,14 +202,14 @@ export class TrayManager {
       } else {
         // 建立新視窗
         chatWindow = this.windowManager.createChatWindow(serviceId);
-        const service = this.aiServiceRepo.findById(serviceId);
+        const service = await this.aiServiceRepo.findById(serviceId);
 
         if (service) {
           // 載入 AI 服務網址
           await chatWindow.loadURL(service.webUrl);
 
           // 更新最後使用時間
-          this.aiServiceRepo.updateLastUsed(serviceId);
+          await this.aiServiceRepo.updateLastUsed(serviceId);
         }
 
         chatWindow.show();
