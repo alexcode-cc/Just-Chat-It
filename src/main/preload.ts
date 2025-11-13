@@ -15,6 +15,9 @@ const electronAPI = {
   // AI 服務
   createChatWindow: (serviceId: string) => ipcRenderer.invoke('ai:create-chat-window', serviceId),
 
+  // 系統整合 - 外部連結
+  openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url),
+
   // 視窗狀態管理
   getWindowState: (windowId: string) => ipcRenderer.invoke('window-state:get', windowId),
   saveWindowState: (windowId: string, state: any) =>

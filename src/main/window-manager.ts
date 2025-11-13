@@ -83,6 +83,8 @@ export class WindowManager {
       },
       frame: false,
       transparent: true,
+      roundedCorners: true, // 啟用圓角（如果平台支持）
+      backgroundColor: '#00000000', // 透明背景
     });
 
     // 恢復最大化狀態

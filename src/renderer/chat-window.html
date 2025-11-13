@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat Window</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+    }
+
+    .chat-window-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    }
+
+    /* 可拖動的標題欄 */
+    .title-bar {
+      height: 40px;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      -webkit-app-region: drag;
+      user-select: none;
+      z-index: 1000;
+    }
+
+    .title-bar-content {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      -webkit-app-region: no-drag;
+    }
+
+    .title-text {
+      font-size: 14px;
+      font-weight: 500;
+      color: #333;
+    }
+
+    .window-controls {
+      display: flex;
+      gap: 8px;
+      -webkit-app-region: no-drag;
+    }
+
+    .control-btn {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s;
+      color: #666;
+    }
+
+    .control-btn:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .control-btn.close:hover {
+      background: #e81123;
+      color: white;
+    }
+
+    /* WebView 容器 */
+    .webview-wrapper {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: #ffffff;
+    }
+
+    webview {
+      width: 100%;
+      height: 100%;
+      display: inline-flex;
+    }
+
+    /* 載入指示器 */
+    .loading-indicator {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      color: #666;
+      z-index: 100;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(0, 0, 0, 0.1);
+      border-top-color: #1976d2;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      font-size: 14px;
+    }
+
+    /* 調試信息（僅開發模式） */
+    #debug-info {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #0f0;
+      padding: 8px;
+      font-size: 11px;
+      font-family: monospace;
+      border-radius: 4px;
+      z-index: 10000;
+      max-height: 100px;
+      overflow: auto;
+      display: none;
+    }
+
+    #debug-info:not(:empty) {
+      display: block !important;
+    }
+
+    /* 默認隱藏調試視窗，除非通過 URL 參數啟用 */
+    #debug-info {
+      display: none !important;
+    }
+
+    /* 只有在啟用調試時才顯示 */
+    body.debug-mode #debug-info:not(:empty) {
+      display: block !important;
+    }
+  </style>
+</head>
+<body>
+  <!-- 調試信息顯示區域（默認隱藏，通過 URL 參數 ?debug=true 啟用） -->
+  <div id="debug-info"></div>
+  <div class="chat-window-container">
+    <!-- 可拖動的標題欄 -->
+    <div class="title-bar">
+      <div class="title-bar-content">
+        <span class="title-text" id="title-text">載入中...</span>
+      </div>
+      <div class="window-controls">
+        <button class="control-btn minimize" id="minimize-btn" title="最小化">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+            <path d="M0 6h12v1H0z"/>
+          </svg>
+        </button>
+        <button class="control-btn maximize" id="maximize-btn" title="最大化">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+            <path d="M0 0h12v12H0z" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+        </button>
+        <button class="control-btn close" id="close-btn" title="關閉">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+            <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- WebView 容器 -->
+    <div class="webview-wrapper">
+      <div class="loading-indicator" id="loading-indicator">
+        <div class="spinner"></div>
+        <div class="loading-text">載入中...</div>
+      </div>
+      <webview id="webview" src="" allowpopups partition="persist:chatgpt"></webview>
+    </div>
+  </div>
+
+  <script>
+    // 檢查是否啟用調試視窗（通過 URL 參數控制）
+    const urlParams = new URLSearchParams(window.location.search);
+    const showDebug = urlParams.get('debug') === 'true';
+    
+    // 如果啟用調試，在 body 上添加類名
+    if (showDebug) {
+      document.body.classList.add('debug-mode');
+      console.log('[ChatWindow] 調試模式已啟用 - 調試視窗將顯示在頁面上');
+    } else {
+      console.log('[ChatWindow] 調試模式已禁用 - 調試訊息僅輸出到控制台');
+    }
+    
+    // 調試函數
+    function debugLog(message, data = null) {
+      const timestamp = new Date().toISOString();
+      const dataStr = data ? JSON.stringify(data, null, 2) : '';
+      const logMessage = `[ChatWindow ${timestamp}] ${message}${dataStr ? '\n' + dataStr : ''}`;
+      
+      // 始終輸出到控制台
+      console.log(`[ChatWindow] ${message}`, data || '');
+      
+      // 只在啟用調試時在頁面上顯示
+      if (showDebug) {
+        const debugDiv = document.getElementById('debug-info');
+        if (debugDiv) {
+          // 保留最後 10 條訊息
+          const lines = debugDiv.textContent.split('\n').filter(l => l.trim());
+          lines.push(logMessage);
+          if (lines.length > 10) {
+            lines.shift();
+          }
+          debugDiv.textContent = lines.join('\n');
+          debugDiv.scrollTop = debugDiv.scrollHeight;
+        }
+      }
+    }
+
+    // 從 URL 參數獲取服務 URL 和標題（urlParams 已在上面定義）
+    const serviceUrl = urlParams.get('url') || 'https://chat.openai.com';
+    const serviceName = urlParams.get('name') || 'ChatGPT';
+    const serviceId = urlParams.get('serviceId') || 'chatgpt';
+
+    debugLog('初始化聊天視窗', {
+      serviceUrl,
+      serviceName,
+      serviceId,
+      location: window.location.href,
+      searchParams: window.location.search
+    });
+
+    // 設置標題
+    document.getElementById('title-text').textContent = serviceName;
+
+    // 獲取 webview 元素
+    const webview = document.getElementById('webview');
+    const loadingIndicator = document.getElementById('loading-indicator');
+    const loadingText = loadingIndicator.querySelector('.loading-text');
+
+    if (!webview) {
+      debugLog('錯誤: 找不到 webview 元素', null);
+      loadingText.textContent = '錯誤: WebView 元素不存在';
+      throw new Error('WebView element not found');
+    }
+
+    debugLog('WebView 元素找到', { webview: webview.tagName });
+
+    // 設置 webview 的 partition
+    const partition = `persist:${serviceId}`;
+    webview.setAttribute('partition', partition);
+    debugLog('設置 partition', { partition });
+
+    // 設置 webview 屬性
+    webview.setAttribute('allowpopups', 'true');
+    webview.setAttribute('nodeintegration', 'false');
+    webview.setAttribute('websecurity', 'true');
+
+    // 載入狀態管理
+    let loadTimeout = null;
+    let isMainFrameLoading = false;
+    let hasMainFrameLoaded = false;
+    let lastLoadedUrl = '';
+    let loadingStartTime = null;
+    const LOAD_TIMEOUT = 30000; // 30 秒超時
+    const MIN_LOADING_TIME = 500; // 最小載入時間（毫秒），避免閃爍
+
+    // WebView 事件處理
+    webview.addEventListener('did-start-loading', (event) => {
+      // 只處理主框架的載入
+      const isMainFrame = event.isMainFrame !== false; // 默認為 true
+      const currentUrl = webview.getURL();
+      
+      debugLog('WebView 開始載入', { 
+        url: currentUrl,
+        isMainFrame: isMainFrame,
+        lastLoadedUrl: lastLoadedUrl,
+        hasMainFrameLoaded: hasMainFrameLoaded
+      });
+      
+      if (isMainFrame) {
+        // 如果 URL 沒有變化且已經載入過，可能是頁面內部的重新載入，不顯示載入指示器
+        if (hasMainFrameLoaded && currentUrl === lastLoadedUrl) {
+          debugLog('忽略相同 URL 的重複載入', { url: currentUrl });
+          return;
+        }
+        
+        isMainFrameLoading = true;
+        hasMainFrameLoaded = false;
+        loadingStartTime = Date.now();
+        loadingIndicator.style.display = 'flex';
+        loadingText.textContent = '載入中...';
+        
+        // 設置超時
+        if (loadTimeout) clearTimeout(loadTimeout);
+        loadTimeout = setTimeout(() => {
+          // 只有在仍在載入時才顯示超時
+          if (isMainFrameLoading && !hasMainFrameLoaded) {
+            debugLog('載入超時', { timeout: LOAD_TIMEOUT });
+            loadingText.textContent = '載入超時，請檢查網路連接';
+          }
+        }, LOAD_TIMEOUT);
+      }
+    });
+
+    webview.addEventListener('did-finish-load', (event) => {
+      // 只處理主框架的載入完成
+      const isMainFrame = event.isMainFrame !== false;
+      const currentUrl = webview.getURL();
+      
+      debugLog('WebView 載入完成', { 
+        url: currentUrl,
+        isMainFrame: isMainFrame,
+        canGoBack: webview.canGoBack(),
+        canGoForward: webview.canGoForward(),
+        loadingTime: loadingStartTime ? Date.now() - loadingStartTime : null
+      });
+      
+      if (isMainFrame) {
+        isMainFrameLoading = false;
+        hasMainFrameLoaded = true;
+        lastLoadedUrl = currentUrl;
+        
+        // 確保載入指示器隱藏（使用延遲確保最小顯示時間，避免閃爍）
+        const hideLoadingIndicator = () => {
+          loadingIndicator.style.display = 'none';
+          debugLog('載入指示器已隱藏', { url: currentUrl });
+        };
+        
+        if (loadingStartTime) {
+          const elapsed = Date.now() - loadingStartTime;
+          if (elapsed < MIN_LOADING_TIME) {
+            // 如果載入太快，延遲隱藏以避免閃爍
+            setTimeout(hideLoadingIndicator, MIN_LOADING_TIME - elapsed);
+          } else {
+            hideLoadingIndicator();
+          }
+          loadingStartTime = null;
+        } else {
+          hideLoadingIndicator();
+        }
+        
+        if (loadTimeout) {
+          clearTimeout(loadTimeout);
+          loadTimeout = null;
+        }
+      }
+    });
+
+    webview.addEventListener('did-stop-loading', (event) => {
+      // 只處理主框架的停止載入
+      const isMainFrame = event.isMainFrame !== false;
+      const currentUrl = webview.getURL();
+      
+      debugLog('WebView 停止載入', { 
+        url: currentUrl,
+        isMainFrame: isMainFrame,
+        hasMainFrameLoaded: hasMainFrameLoaded
+      });
+      
+      // 如果主框架已載入完成，確保載入指示器隱藏
+      if (isMainFrame && hasMainFrameLoaded) {
+        // 只有在 URL 匹配時才隱藏（避免新頁面載入時誤隱藏）
+        if (currentUrl === lastLoadedUrl || !isMainFrameLoading) {
+          loadingIndicator.style.display = 'none';
+          if (loadTimeout) {
+            clearTimeout(loadTimeout);
+            loadTimeout = null;
+          }
+        }
+      }
+    });
+
+    webview.addEventListener('did-fail-load', (event) => {
+      // 只處理主框架的載入失敗
+      const isMainFrame = event.isMainFrame !== false;
+      debugLog('WebView 載入失敗', {
+        errorCode: event.errorCode,
+        errorDescription: event.errorDescription,
+        validatedURL: event.validatedURL,
+        isMainFrame: isMainFrame
+      });
+      
+      // 只處理主框架的錯誤
+      if (!isMainFrame) {
+        debugLog('忽略子框架載入失敗', { errorCode: event.errorCode });
+        return;
+      }
+      
+      isMainFrameLoading = false;
+      loadingIndicator.style.display = 'flex';
+      let errorMsg = '載入失敗';
+      
+      // 根據錯誤代碼提供更詳細的訊息
+      switch (event.errorCode) {
+        case -3: // ERR_ABORTED
+          errorMsg = '載入已取消';
+          debugLog('載入被取消（可能是用戶操作）', null);
+          // 如果是取消，且已經有內容載入，不顯示錯誤
+          if (hasMainFrameLoaded) {
+            loadingIndicator.style.display = 'none';
+            return;
+          }
+          break;
+        case -6: // ERR_FILE_NOT_FOUND
+          errorMsg = '找不到文件或資源';
+          break;
+        case -105: // ERR_NAME_NOT_RESOLVED
+          errorMsg = '無法解析域名，請檢查網路連接';
+          break;
+        case -106: // ERR_INTERNET_DISCONNECTED
+          errorMsg = '網路連接中斷';
+          break;
+        case -118: // ERR_CONNECTION_TIMED_OUT
+          errorMsg = '連接超時';
+          break;
+        default:
+          errorMsg = `錯誤代碼: ${event.errorCode} - ${event.errorDescription || '未知錯誤'}`;
+      }
+      
+      loadingText.textContent = errorMsg;
+      if (loadTimeout) {
+        clearTimeout(loadTimeout);
+        loadTimeout = null;
+      }
+    });
+
+    webview.addEventListener('did-navigate', (event) => {
+      const isMainFrame = event.isMainFrame !== false;
+      debugLog('WebView 導航', { 
+        url: event.url,
+        isMainFrame: isMainFrame,
+        previousUrl: lastLoadedUrl
+      });
+      // 導航到新 URL 時重置載入狀態
+      if (isMainFrame && event.url !== lastLoadedUrl) {
+        debugLog('導航到新 URL，重置載入狀態', { 
+          from: lastLoadedUrl,
+          to: event.url
+        });
+        isMainFrameLoading = true;
+        hasMainFrameLoaded = false;
+        lastLoadedUrl = ''; // 清空，等待新 URL 載入完成
+      }
+    });
+
+    webview.addEventListener('did-navigate-in-page', (event) => {
+      debugLog('WebView 頁內導航', { 
+        url: event.url,
+        isMainFrame: event.isMainFrame !== false
+      });
+      // 頁內導航不影響載入狀態
+    });
+
+    webview.addEventListener('dom-ready', () => {
+      debugLog('WebView DOM 準備就緒', { url: webview.getURL() });
+    });
+
+    webview.addEventListener('console-message', (event) => {
+      debugLog('WebView 控制台訊息', {
+        level: event.level,
+        message: event.message,
+        line: event.line,
+        sourceId: event.sourceId
+      });
+    });
+
+    // 等待 DOM 準備就緒後再載入 URL
+    function startLoading() {
+      debugLog('開始載入 URL', { serviceUrl });
+      try {
+        // 確保 webview 已準備好
+        if (webview && webview.tagName === 'WEBVIEW') {
+          webview.src = serviceUrl;
+          debugLog('URL 已設置', { 
+            src: webview.src,
+            partition: webview.getAttribute('partition'),
+            allowpopups: webview.getAttribute('allowpopups')
+          });
+        } else {
+          debugLog('錯誤: WebView 元素未正確初始化', { 
+            webview: webview,
+            tagName: webview?.tagName 
+          });
+          loadingText.textContent = '錯誤: WebView 未正確初始化';
+        }
+      } catch (error) {
+        debugLog('設置 URL 時發生錯誤', { 
+          error: error.message, 
+          stack: error.stack,
+          name: error.name
+        });
+        loadingText.textContent = `錯誤: ${error.message}`;
+      }
+    }
+
+    // 如果 DOM 已準備好，立即開始載入；否則等待
+    if (document.readyState === 'loading') {
+      debugLog('等待 DOM 載入完成', null);
+      document.addEventListener('DOMContentLoaded', startLoading);
+    } else {
+      debugLog('DOM 已準備就緒，立即開始載入', null);
+      // 使用 setTimeout 確保所有事件監聽器都已設置
+      setTimeout(startLoading, 100);
+    }
+
+    // 視窗控制按鈕 - 使用 window.electronAPI（通過 preload 腳本）
+    document.getElementById('minimize-btn').addEventListener('click', () => {
+      if (window.electronAPI) {
+        window.electronAPI.minimizeWindow();
+      }
+    });
+
+    document.getElementById('maximize-btn').addEventListener('click', () => {
+      if (window.electronAPI) {
+        window.electronAPI.maximizeWindow();
+      }
+    });
+
+    document.getElementById('close-btn').addEventListener('click', () => {
+      if (window.electronAPI) {
+        window.electronAPI.closeWindow();
+      }
+    });
+
+    // 處理新視窗請求
+    webview.addEventListener('new-window', (event) => {
+      event.preventDefault();
+      if (window.electronAPI && window.electronAPI.openExternal) {
+        window.electronAPI.openExternal(event.url);
+      }
+    });
+  </script>
+</body>
+</html>
+

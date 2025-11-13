@@ -1,4 +1,5 @@
-import { ipcMain, BrowserWindow, clipboard, Notification, shell } from 'electron';
+import { ipcMain, BrowserWindow, clipboard, Notification, shell, app } from 'electron';
+import path from 'path';
 import {
   AIServiceRepository,
   ChatSessionRepository,
@@ -73,6 +74,17 @@ export function setupIpcHandlers(
   ipcMain.handle('window:close', (event) => {
     const window = BrowserWindow.fromWebContents(event.sender);
     window?.close();
+  });
+
+  // 系統整合 - 外部連結
+  ipcMain.handle('shell:open-external', async (event, url: string) => {
+    try {
+      await shell.openExternal(url);
+      return { success: true };
+    } catch (error) {
+      console.error('Error opening external URL:', error);
+      throw error;
+    }
   });
 
   ipcMain.handle('window:toggle-fullscreen', (event) => {
@@ -278,7 +290,22 @@ export function setupIpcHandlers(
       // 載入 AI 服務網址
       const service = await aiServiceRepo.findById(serviceId);
       if (service) {
-        await chatWindow.loadURL(service.webUrl);
+        // 載入包裝 HTML 文件，通過 query 參數傳遞服務信息
+        // 在開發環境中，HTML 文件在 src/renderer，生產環境在 dist/renderer
+        const isDev = process.env.NODE_ENV === 'development';
+        const appPath = app.getAppPath();
+        const chatWindowHtmlPath = isDev
+          ? path.join(appPath, 'src/renderer/chat-window.html')
+          : path.join(appPath, 'dist/renderer/chat-window.html');
+        
+        // 使用 loadFile 方法，Electron 會自動處理路徑和 query 參數
+        await chatWindow.loadFile(chatWindowHtmlPath, {
+          query: {
+            url: service.webUrl,
+            name: service.displayName || service.name,
+            serviceId: serviceId,
+          },
+        });
         await aiServiceRepo.updateLastUsed(serviceId);
       }
 

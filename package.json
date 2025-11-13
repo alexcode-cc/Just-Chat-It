@@ -7,7 +7,8 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc --build && vite build",
+    "build": "vue-tsc --build && vite build && npm run copy:html",
+    "copy:html": "node -e \"const fs = require('fs'); const path = require('path'); if (!fs.existsSync('dist/renderer')) fs.mkdirSync('dist/renderer', { recursive: true }); fs.copyFileSync('src/renderer/chat-window.html', 'dist/renderer/chat-window.html');\"",
     "build:electron": "npm run build && electron-builder",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "npm run build && electron-builder --mac",

@@ -205,8 +205,22 @@ export class TrayManager {
         const service = await this.aiServiceRepo.findById(serviceId);
 
         if (service) {
-          // 載入 AI 服務網址
-          await chatWindow.loadURL(service.webUrl);
+          // 載入包裝 HTML 文件，通過 URL 參數傳遞服務信息
+          // 在開發環境中，HTML 文件在 src/renderer，生產環境在 dist/renderer
+          const isDev = process.env.NODE_ENV === 'development';
+          const appPath = app.getAppPath();
+          const chatWindowHtmlPath = isDev
+            ? path.join(appPath, 'src/renderer/chat-window.html')
+            : path.join(appPath, 'dist/renderer/chat-window.html');
+          
+          // 使用 loadFile 方法，Electron 會自動處理路徑
+          await chatWindow.loadFile(chatWindowHtmlPath, {
+            query: {
+              url: service.webUrl,
+              name: service.displayName || service.name,
+              serviceId: serviceId,
+            },
+          });
 
           // 更新最後使用時間
           await this.aiServiceRepo.updateLastUsed(serviceId);
